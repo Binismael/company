@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - El Bethel Academy</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button class="mobile-menu-btn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-info">
+                        <div class="school-logo">
+                            <span>EB</span>
+                        </div>
+                        <div class="header-text">
+                            <h1>Student Dashboard</h1>
+                            <p id="studentWelcome">Welcome back, Student!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-center">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" placeholder="Search anything..." class="search-input">
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <button class="theme-toggle">
+                        <i class="fas fa-sun"></i>
+                    </button>
+
+                    <div class="notifications-dropdown">
+                        <button class="notifications-btn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge">2</span>
+                        </button>
+                    </div>
+
+                    <div class="user-dropdown">
+                        <button class="user-btn">
+                            <div class="user-avatar">
+                                <span id="userInitials">S</span>
+                                <div class="online-indicator"></div>
+                            </div>
+                        </button>
+                        <div class="dropdown-menu">
+                            <div class="user-info">
+                                <p class="user-name" id="userName">Demo Student</p>
+                                <p class="user-email" id="userEmail">student@elbethel.edu</p>
+                                <div class="user-badges">
+                                    <span class="role-badge">STUDENT</span>
+                                    <span class="status-badge">Online</span>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item logout-btn" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Log out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Welcome Banner -->
+        <div class="welcome-banner student-banner">
+            <div class="banner-content">
+                <div class="banner-text">
+                    <h2 id="greetingText">Good morning, Student! 👋</h2>
+                    <p>Ready to continue your learning journey? Let's make today productive!</p>
+                    <div class="banner-features">
+                        <div class="feature-item">
+                            <i class="fas fa-bolt"></i>
+                            <span>AI-Powered</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-globe"></i>
+                            <span>Real-time Sync</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Secure</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="banner-actions">
+                    <button class="btn btn-outline-white">
+                        <i class="fas fa-comments"></i>
+                        AI Tutor
+                    </button>
+                    <button class="btn btn-white">
+                        <i class="fas fa-bullseye"></i>
+                        View Assignments
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="dashboard-content">
+            <!-- Performance Overview -->
+            <div class="stats-grid">
+                <div class="stat-card stat-primary">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-value">4.57</p>
+                            <p class="stat-label">Current GPA</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-warning">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-value">A</p>
+                            <p class="stat-label">Overall Grade</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-purple">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-value">3rd</p>
+                            <p class="stat-label">Class Position</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-success">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-value">95%</p>
+                            <p class="stat-label">Attendance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Tutor Section -->
+            <div class="card ai-tutor-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-brain"></i> AI Learning Assistant</h3>
+                    <p>Personalized recommendations and study guidance</p>
+                </div>
+                <div class="card-content">
+                    <div class="ai-recommendations">
+                        <div class="recommendation-item study">
+                            <div class="recommendation-indicator"></div>
+                            <div class="recommendation-content">
+                                <h4>Focus on Organic Chemistry</h4>
+                                <p>Your performance in organic chemistry topics needs improvement</p>
+                                <button class="btn btn-sm btn-primary">Start Practice</button>
+                            </div>
+                        </div>
+                        <div class="recommendation-item strength">
+                            <div class="recommendation-indicator"></div>
+                            <div class="recommendation-content">
+                                <h4>Excellent in Calculus</h4>
+                                <p>You're performing exceptionally well in calculus topics</p>
+                                <button class="btn btn-sm btn-primary">Advanced Problems</button>
+                            </div>
+                        </div>
+                        <div class="recommendation-item reminder">
+                            <div class="recommendation-indicator"></div>
+                            <div class="recommendation-content">
+                                <h4>Physics Assignment Due</h4>
+                                <p>Don't forget your physics assignment due tomorrow</p>
+                                <button class="btn btn-sm btn-primary">Submit Now</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ai-chat-prompt">
+                        <div class="chat-prompt-content">
+                            <i class="fas fa-comments chat-icon"></i>
+                            <div>
+                                <h4>Ask AI Tutor</h4>
+                                <p>Get instant help with your studies</p>
+                            </div>
+                            <button class="btn btn-primary">Chat Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="academics">Academics</button>
+                    <button class="tab-btn" data-tab="exams">Exams</button>
+                    <button class="tab-btn" data-tab="payments">Payments</button>
+                    <button class="tab-btn" data-tab="assignments">Assignments</button>
+                </div>
+
+                <!-- Academics Tab -->
+                <div class="tab-content active" id="academics">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Subject Performance</h3>
+                            <p>Your current academic performance across all subjects</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="subjects-list">
+                                <div class="subject-item">
+                                    <div class="subject-info">
+                                        <i class="fas fa-book-open subject-icon"></i>
+                                        <div>
+                                            <h4>Mathematics</h4>
+                                            <div class="subject-meta">
+                                                <span class="grade-badge grade-a">A</span>
+                                                <span class="score">85%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <i class="fas fa-trending-up trend-up"></i>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 85%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-item">
+                                    <div class="subject-info">
+                                        <i class="fas fa-book-open subject-icon"></i>
+                                        <div>
+                                            <h4>English Language</h4>
+                                            <div class="subject-meta">
+                                                <span class="grade-badge grade-b">B+</span>
+                                                <span class="score">78%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <i class="fas fa-trending-up trend-up"></i>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 78%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-item">
+                                    <div class="subject-info">
+                                        <i class="fas fa-book-open subject-icon"></i>
+                                        <div>
+                                            <h4>Physics</h4>
+                                            <div class="subject-meta">
+                                                <span class="grade-badge grade-a">A-</span>
+                                                <span class="score">82%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <i class="fas fa-minus trend-stable"></i>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 82%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-item">
+                                    <div class="subject-info">
+                                        <i class="fas fa-book-open subject-icon"></i>
+                                        <div>
+                                            <h4>Chemistry</h4>
+                                            <div class="subject-meta">
+                                                <span class="grade-badge grade-b">B+</span>
+                                                <span class="score">79%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <i class="fas fa-trending-down trend-down"></i>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 79%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-item">
+                                    <div class="subject-info">
+                                        <i class="fas fa-book-open subject-icon"></i>
+                                        <div>
+                                            <h4>Biology</h4>
+                                            <div class="subject-meta">
+                                                <span class="grade-badge grade-a">A</span>
+                                                <span class="score">88%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <i class="fas fa-trending-up trend-up"></i>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 88%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="subject-item">
+                                    <div class="subject-info">
+                                        <i class="fas fa-book-open subject-icon"></i>
+                                        <div>
+                                            <h4>Further Mathematics</h4>
+                                            <div class="subject-meta">
+                                                <span class="grade-badge grade-b">B</span>
+                                                <span class="score">75%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="subject-progress">
+                                        <i class="fas fa-trending-up trend-up"></i>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 75%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exams Tab -->
+                <div class="tab-content" id="exams">
+                    <div class="content-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Upcoming Exams</h3>
+                                <p>Your scheduled CBT and practical exams</p>
+                            </div>
+                            <div class="card-content">
+                                <div class="exams-list">
+                                    <div class="exam-item">
+                                        <div class="exam-info">
+                                            <i class="fas fa-calendar exam-icon"></i>
+                                            <div>
+                                                <h4>Mathematics</h4>
+                                                <p>2024-01-15 • 2 hours</p>
+                                            </div>
+                                        </div>
+                                        <span class="exam-type cbt">CBT</span>
+                                    </div>
+                                    <div class="exam-item">
+                                        <div class="exam-info">
+                                            <i class="fas fa-calendar exam-icon"></i>
+                                            <div>
+                                                <h4>Physics</h4>
+                                                <p>2024-01-17 • 1.5 hours</p>
+                                            </div>
+                                        </div>
+                                        <span class="exam-type cbt">CBT</span>
+                                    </div>
+                                    <div class="exam-item">
+                                        <div class="exam-info">
+                                            <i class="fas fa-calendar exam-icon"></i>
+                                            <div>
+                                                <h4>Chemistry</h4>
+                                                <p>2024-01-20 • 3 hours</p>
+                                            </div>
+                                        </div>
+                                        <span class="exam-type practical">Practical</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Exam Preparation</h3>
+                                <p>AI-powered study recommendations</p>
+                            </div>
+                            <div class="card-content">
+                                <div class="preparation-list">
+                                    <div class="preparation-item ready">
+                                        <div class="prep-indicator">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                        <div class="prep-content">
+                                            <h4>Ready for Mathematics</h4>
+                                            <p>You've completed 85% of practice questions</p>
+                                        </div>
+                                    </div>
+                                    <div class="preparation-item attention">
+                                        <div class="prep-indicator">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div class="prep-content">
+                                            <h4>Physics Needs Attention</h4>
+                                            <p>Focus on electromagnetic waves topic</p>
+                                        </div>
+                                    </div>
+                                    <div class="preparation-item practice">
+                                        <div class="prep-indicator">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                        </div>
+                                        <div class="prep-content">
+                                            <h4>Chemistry Practice Needed</h4>
+                                            <p>Complete organic chemistry exercises</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payments Tab -->
+                <div class="tab-content" id="payments">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Payment Status</h3>
+                            <p>Track your school fees and payment history</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="empty-state">
+                                <i class="fas fa-credit-card empty-icon"></i>
+                                <h3>Payment Management</h3>
+                                <p>View fees, upload payment proof, and track status</p>
+                                <button class="btn btn-primary">View Payment Details</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assignments Tab -->
+                <div class="tab-content" id="assignments">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Assignments & Projects</h3>
+                            <p>Track your assignments and submission status</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="empty-state">
+                                <i class="fas fa-bullseye empty-icon"></i>
+                                <h3>Assignment Tracker</h3>
+                                <p>Manage your assignments with AI-powered reminders</p>
+                                <button class="btn btn-primary">View Assignments</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chat Widget -->
+    <div id="aiChatWidget" class="ai-chat-widget">
+        <button id="chatToggle" class="chat-toggle">
+            <i class="fas fa-comments"></i>
+            <div class="chat-indicator"></div>
+        </button>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/student-dashboard.js"></script>
+</body>
+</html>

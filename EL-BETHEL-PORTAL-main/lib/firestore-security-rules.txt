@@ -1,0 +1,180 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to get user role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'admin';
+    }
+    
+    // Helper function to check if user is teacher
+    function isTeacher() {
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'teacher';
+    }
+    
+    // Helper function to check if user is bursar
+    function isBursar() {
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'bursar';
+    }
+    
+    // Helper function to check if user is student
+    function isStudent() {
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'student';
+    }
+    
+    // Helper function to check if user is parent
+    function isParent() {
+      return isAuthenticated() && getUserRole(request.auth.uid) == 'parent';
+    }
+
+    // User profiles - users can read/write their own profile
+    // Admins can read/write all profiles
+    // Teachers can read student profiles in their classes
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        (isTeacher() && isStudent()) ||
+        (isParent() && resource.data.parentId == request.auth.uid)
+      );
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+    }
+
+    // Public school data (announcements, general info)
+    match /public/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Classes and subjects data
+    match /classes/{classId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher();
+      
+      // Students in classes
+      match /students/{studentId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == studentId ||
+          isAdmin() ||
+          isTeacher()
+        );
+        allow write: if isAdmin() || isTeacher();
+      }
+    }
+
+    // CBT Exams
+    match /exams/{examId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        isTeacher() || 
+        (isStudent() && resource.data.classId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.classes)
+      );
+      allow write: if isAdmin() || isTeacher();
+      
+      // Exam results
+      match /results/{studentId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == studentId ||
+          isAdmin() ||
+          isTeacher() ||
+          (isParent() && resource.data.parentId == request.auth.uid)
+        );
+        allow write: if isAdmin() || isTeacher();
+      }
+    }
+
+    // Student assignments
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isTeacher() ||
+        (isStudent() && resource.data.classId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.classes)
+      );
+      allow write: if isAdmin() || isTeacher();
+      
+      // Assignment submissions
+      match /submissions/{studentId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == studentId ||
+          isAdmin() ||
+          isTeacher() ||
+          (isParent() && resource.data.parentId == request.auth.uid)
+        );
+        allow write: if isAuthenticated() && (
+          request.auth.uid == studentId ||
+          isAdmin() ||
+          isTeacher()
+        );
+      }
+    }
+
+    // Payment records
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isAdmin() ||
+        isBursar() ||
+        (isParent() && resource.data.parentId == request.auth.uid)
+      );
+      allow write: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isAdmin() ||
+        isBursar()
+      );
+    }
+
+    // Financial reports (bursar and admin only)
+    match /financial_reports/{reportId} {
+      allow read: if isAdmin() || isBursar();
+      allow write: if isAdmin() || isBursar();
+    }
+
+    // Attendance records
+    match /attendance/{recordId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isAdmin() ||
+        isTeacher() ||
+        (isParent() && resource.data.parentId == request.auth.uid)
+      );
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    // Messages/Communications
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isAdmin()
+      );
+      allow write: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isAdmin()
+      );
+    }
+
+    // AI Analytics (admin and teachers only)
+    match /analytics/{analyticsId} {
+      allow read: if isAdmin() || isTeacher();
+      allow write: if isAdmin();
+    }
+
+    // System logs (admin only)
+    match /logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

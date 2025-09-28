@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - El Bethel Academy</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button class="mobile-menu-btn">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-info">
+                        <div class="school-logo">
+                            <span>EB</span>
+                        </div>
+                        <div class="header-text">
+                            <h1>Admin Dashboard</h1>
+                            <p>Complete school management and oversight</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-center">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" placeholder="Search anything..." class="search-input">
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div class="system-status">
+                        <div class="status-item">
+                            <i class="fas fa-wifi status-icon online"></i>
+                            <span>Online</span>
+                        </div>
+                        <div class="status-divider"></div>
+                        <div class="status-item">
+                            <i class="fas fa-battery-three-quarters status-icon"></i>
+                            <span>100%</span>
+                        </div>
+                        <div class="status-divider"></div>
+                        <span id="currentTime"></span>
+                    </div>
+
+                    <button class="theme-toggle">
+                        <i class="fas fa-sun"></i>
+                    </button>
+
+                    <div class="notifications-dropdown">
+                        <button class="notifications-btn">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge">3</span>
+                        </button>
+                    </div>
+
+                    <div class="user-dropdown">
+                        <button class="user-btn">
+                            <div class="user-avatar">
+                                <span id="userInitials">A</span>
+                                <div class="online-indicator"></div>
+                            </div>
+                        </button>
+                        <div class="dropdown-menu">
+                            <div class="user-info">
+                                <p class="user-name" id="userName">Demo Admin</p>
+                                <p class="user-email" id="userEmail">admin@elbethel.edu</p>
+                                <div class="user-badges">
+                                    <span class="role-badge">ADMIN</span>
+                                    <span class="status-badge">Online</span>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" class="dropdown-item">
+                                <i class="fas fa-user"></i>
+                                Profile
+                            </a>
+                            <a href="#" class="dropdown-item">
+                                <i class="fas fa-cog"></i>
+                                Settings
+                            </a>
+                            <a href="#" class="dropdown-item">
+                                <i class="fas fa-shield-alt"></i>
+                                Privacy
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item logout-btn" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Log out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <div class="banner-content">
+                <div class="banner-text">
+                    <h2>Good morning, Admin! 👋</h2>
+                    <p>Ready to manage your school? Let's make today productive!</p>
+                    <div class="banner-features">
+                        <div class="feature-item">
+                            <i class="fas fa-bolt"></i>
+                            <span>AI-Powered</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-globe"></i>
+                            <span>Real-time Sync</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Secure</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="banner-actions">
+                    <button class="btn btn-outline-white">
+                        <i class="fas fa-file-alt"></i>
+                        Generate Report
+                    </button>
+                    <button class="btn btn-white">
+                        <i class="fas fa-user-plus"></i>
+                        Add User
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="dashboard-content">
+            <!-- Stats Overview -->
+            <div class="stats-grid">
+                <div class="stat-card stat-primary">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-label">Total Students</p>
+                            <p class="stat-value">1,247</p>
+                            <p class="stat-change">+12% from last term</p>
+                        </div>
+                        <i class="fas fa-users stat-icon"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-success">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-label">Total Teachers</p>
+                            <p class="stat-value">87</p>
+                            <p class="stat-change">+3 new this month</p>
+                        </div>
+                        <i class="fas fa-graduation-cap stat-icon"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-warning">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-label">Revenue (₦)</p>
+                            <p class="stat-value">45.6M</p>
+                            <p class="stat-change">+8% this term</p>
+                        </div>
+                        <i class="fas fa-dollar-sign stat-icon"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-danger">
+                    <div class="stat-content">
+                        <div class="stat-info">
+                            <p class="stat-label">Pending Items</p>
+                            <p class="stat-value">156</p>
+                            <p class="stat-change">Requires attention</p>
+                        </div>
+                        <i class="fas fa-exclamation-triangle stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="users">User Management</button>
+                    <button class="tab-btn" data-tab="academics">Academics</button>
+                    <button class="tab-btn" data-tab="finances">Finances</button>
+                    <button class="tab-btn" data-tab="settings">Settings</button>
+                </div>
+
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overview">
+                    <div class="content-grid">
+                        <!-- Recent Activities -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-bell"></i> Recent Activities</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="activity-list">
+                                    <div class="activity-item">
+                                        <div class="activity-indicator success"></div>
+                                        <div class="activity-content">
+                                            <p class="activity-text">New student registered: John Doe (JSS1A)</p>
+                                            <p class="activity-time">5 min ago</p>
+                                        </div>
+                                    </div>
+                                    <div class="activity-item">
+                                        <div class="activity-indicator info"></div>
+                                        <div class="activity-content">
+                                            <p class="activity-text">Mathematics CBT completed by SS2A</p>
+                                            <p class="activity-time">15 min ago</p>
+                                        </div>
+                                    </div>
+                                    <div class="activity-item">
+                                        <div class="activity-indicator success"></div>
+                                        <div class="activity-content">
+                                            <p class="activity-text">Payment approved for 23 students</p>
+                                            <p class="activity-time">1 hour ago</p>
+                                        </div>
+                                    </div>
+                                    <div class="activity-item">
+                                        <div class="activity-indicator warning"></div>
+                                        <div class="activity-content">
+                                            <p class="activity-text">Server maintenance scheduled</p>
+                                            <p class="activity-time">2 hours ago</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pending Approvals -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-shield-alt"></i> Pending Approvals</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="approval-list">
+                                    <div class="approval-item">
+                                        <div class="approval-info">
+                                            <p class="approval-title">Mrs. Sarah Johnson</p>
+                                            <p class="approval-subtitle">Mathematics</p>
+                                        </div>
+                                        <div class="approval-actions">
+                                            <button class="btn btn-sm btn-success">Approve</button>
+                                            <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                        </div>
+                                    </div>
+                                    <div class="approval-item">
+                                        <div class="approval-info">
+                                            <p class="approval-title">Student Fee Payment</p>
+                                            <p class="approval-subtitle">₦45,000</p>
+                                        </div>
+                                        <div class="approval-actions">
+                                            <button class="btn btn-sm btn-success">Approve</button>
+                                            <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                        </div>
+                                    </div>
+                                    <div class="approval-item">
+                                        <div class="approval-info">
+                                            <p class="approval-title">Mid-term Break Notice</p>
+                                            <p class="approval-subtitle">Academic</p>
+                                        </div>
+                                        <div class="approval-actions">
+                                            <button class="btn btn-sm btn-success">Approve</button>
+                                            <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Quick Actions</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="quick-actions-grid">
+                                <button class="quick-action-btn primary">
+                                    <i class="fas fa-users"></i>
+                                    <span>Add Student</span>
+                                </button>
+                                <button class="quick-action-btn success">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <span>Add Teacher</span>
+                                </button>
+                                <button class="quick-action-btn purple">
+                                    <i class="fas fa-book-open"></i>
+                                    <span>Create Class</span>
+                                </button>
+                                <button class="quick-action-btn warning">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <span>View Reports</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Management Tab -->
+                <div class="tab-content" id="users">
+                    <div class="content-grid">
+                        <!-- Generate Teacher Code -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Generate Teacher Code</h3>
+                                <p>Create access codes for new teachers</p>
+                            </div>
+                            <div class="card-content">
+                                <button id="generateCodeBtn" class="btn btn-primary btn-full">
+                                    Generate New Teacher Code
+                                </button>
+                                <div id="generatedCodeContainer" class="generated-code" style="display: none;">
+                                    <div class="code-display">
+                                        <label>Teacher Code</label>
+                                        <p id="generatedCode" class="code-value"></p>
+                                    </div>
+                                    <button id="copyCodeBtn" class="btn btn-sm btn-primary">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Statistics -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>User Statistics</h3>
+                            </div>
+                            <div class="card-content">
+                                <div class="stats-list">
+                                    <div class="stats-item">
+                                        <span>Active Students</span>
+                                        <span class="stats-value primary">1,247</span>
+                                    </div>
+                                    <div class="stats-item">
+                                        <span>Active Teachers</span>
+                                        <span class="stats-value success">87</span>
+                                    </div>
+                                    <div class="stats-item">
+                                        <span>Pending Approvals</span>
+                                        <span class="stats-value warning">12</span>
+                                    </div>
+                                    <div class="stats-item">
+                                        <span>Parent Accounts</span>
+                                        <span class="stats-value purple">892</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other tabs content -->
+                <div class="tab-content" id="academics">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Academic Management</h3>
+                            <p>Manage classes, subjects, and academic calendar</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="academic-actions-grid">
+                                <button class="academic-action-btn primary">
+                                    <i class="fas fa-book-open"></i>
+                                    <span>Manage Classes</span>
+                                </button>
+                                <button class="academic-action-btn success">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Academic Calendar</span>
+                                </button>
+                                <button class="academic-action-btn purple">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Performance Analytics</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="finances">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Financial Overview</h3>
+                            <p>Monitor school finances and payment status</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="empty-state">
+                                <i class="fas fa-dollar-sign empty-icon"></i>
+                                <h3>Financial Management</h3>
+                                <p>Comprehensive financial tracking and reporting</p>
+                                <button class="btn btn-warning">Access Financial Dashboard</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="settings">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>System Settings</h3>
+                            <p>Configure school settings and preferences</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="empty-state">
+                                <i class="fas fa-cog empty-icon"></i>
+                                <h3>System Configuration</h3>
+                                <p>Manage system settings and configurations</p>
+                                <button class="btn btn-secondary">Open Settings</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chat Widget -->
+    <div id="aiChatWidget" class="ai-chat-widget">
+        <button id="chatToggle" class="chat-toggle">
+            <i class="fas fa-comments"></i>
+            <div class="chat-indicator"></div>
+        </button>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/admin-dashboard.js"></script>
+</body>
+</html>

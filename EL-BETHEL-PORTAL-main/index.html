@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Bethel Academy - Next-Generation Learning Platform</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/animations.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <div class="nav-container">
+        <a href="landing.html" class="nav-home-btn">
+            <i class="fas fa-home"></i>
+            Home
+        </a>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Animated Background -->
+        <div class="animated-bg">
+            <div class="bg-element bg-element-1"></div>
+            <div class="bg-element bg-element-2"></div>
+        </div>
+
+        <div class="content-grid">
+            <!-- Left Side - School Info -->
+            <div class="school-info">
+                <div class="school-header">
+                    <div class="school-logo-container">
+                        <img src="images/logo.png" alt="El Bethel Academy" class="school-logo">
+                        <div class="school-details">
+                            <h1>El Bethel Academy</h1>
+                            <p>Next-Generation Learning Platform</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <i class="fas fa-users stat-icon"></i>
+                            <div>
+                                <p class="stat-number">1,200+</p>
+                                <p class="stat-label">Active Students</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <i class="fas fa-book-open stat-icon"></i>
+                            <div>
+                                <p class="stat-number">85+</p>
+                                <p class="stat-label">Expert Teachers</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="features-list">
+                    <div class="feature-item">
+                        <i class="fas fa-brain feature-icon"></i>
+                        <div>
+                            <h3>AI-Powered Learning</h3>
+                            <p>Personalized education with advanced AI tutoring</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-bolt feature-icon"></i>
+                        <div>
+                            <h3>Real-time Collaboration</h3>
+                            <p>Interactive classrooms and instant feedback</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-shield-alt feature-icon"></i>
+                        <div>
+                            <h3>Advanced Security</h3>
+                            <p>Secure authentication and protected data</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="badges">
+                    <span class="badge"><i class="fas fa-sparkles"></i> AI-Enhanced</span>
+                    <span class="badge"><i class="fas fa-globe"></i> Cloud-Native</span>
+                    <span class="badge"><i class="fas fa-mobile-alt"></i> Mobile-First</span>
+                </div>
+            </div>
+
+            <!-- Right Side - Authentication -->
+            <div class="auth-container">
+                <!-- Role Selection -->
+                <div id="roleSelection" class="auth-card">
+                    <div class="auth-header">
+                        <img src="images/logo.png" alt="El Bethel Academy" class="auth-logo">
+                        <h2>Choose Your Role</h2>
+                        <p>Select your role to access the appropriate portal</p>
+                    </div>
+
+                    <div class="roles-grid">
+                        <div class="role-card" data-role="admin">
+                            <div class="role-content">
+                                <div class="role-info">
+                                    <div class="role-icon-container">
+                                        <i class="fas fa-shield-alt role-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Administrator</h3>
+                                        <p>Full system access and school management</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right role-arrow"></i>
+                            </div>
+                            <div class="role-features">
+                                <span class="feature-tag">User Management</span>
+                                <span class="feature-tag">System Settings</span>
+                                <span class="feature-tag">Reports</span>
+                                <span class="feature-tag">AI Analytics</span>
+                            </div>
+                        </div>
+
+                        <div class="role-card" data-role="teacher">
+                            <div class="role-content">
+                                <div class="role-info">
+                                    <div class="role-icon-container">
+                                        <i class="fas fa-graduation-cap role-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Teacher <span class="code-required">Code Required</span></h3>
+                                        <p>Manage classes, create exams, and track student progress</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right role-arrow"></i>
+                            </div>
+                            <div class="role-features">
+                                <span class="feature-tag">Create CBT Exams</span>
+                                <span class="feature-tag">Grade Students</span>
+                                <span class="feature-tag">AI Assistant</span>
+                                <span class="feature-tag">Class Analytics</span>
+                            </div>
+                        </div>
+
+                        <div class="role-card" data-role="student">
+                            <div class="role-content">
+                                <div class="role-info">
+                                    <div class="role-icon-container">
+                                        <i class="fas fa-book-open role-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Student</h3>
+                                        <p>Access your courses, assignments, and grades</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right role-arrow"></i>
+                            </div>
+                            <div class="role-features">
+                                <span class="feature-tag">View Grades</span>
+                                <span class="feature-tag">Submit Assignments</span>
+                                <span class="feature-tag">AI Tutor</span>
+                                <span class="feature-tag">CBT Exams</span>
+                            </div>
+                        </div>
+
+                        <div class="role-card" data-role="bursar">
+                            <div class="role-content">
+                                <div class="role-info">
+                                    <div class="role-icon-container">
+                                        <i class="fas fa-credit-card role-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Bursar</h3>
+                                        <p>Manage school finances and student payments</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right role-arrow"></i>
+                            </div>
+                            <div class="role-features">
+                                <span class="feature-tag">Payment Management</span>
+                                <span class="feature-tag">Financial Reports</span>
+                                <span class="feature-tag">Fee Structure</span>
+                                <span class="feature-tag">Collections</span>
+                            </div>
+                        </div>
+
+                        <div class="role-card" data-role="parent">
+                            <div class="role-content">
+                                <div class="role-info">
+                                    <div class="role-icon-container">
+                                        <i class="fas fa-users role-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3>Parent</h3>
+                                        <p>Monitor your child's academic progress</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right role-arrow"></i>
+                            </div>
+                            <div class="role-features">
+                                <span class="feature-tag">Child's Progress</span>
+                                <span class="feature-tag">Communication</span>
+                                <span class="feature-tag">Payment Status</span>
+                                <span class="feature-tag">Reports</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authentication Form -->
+                <div id="authForm" class="auth-card" style="display: none;">
+                    <div class="auth-header">
+                        <button id="backBtn" class="back-btn">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <img src="images/logo.png" alt="El Bethel Academy" class="auth-logo">
+                        <div id="selectedRoleBadge" class="selected-role-badge"></div>
+                        <h2 id="authTitle">Welcome Back</h2>
+                        <p id="authSubtitle">Sign in to your portal</p>
+                    </div>
+
+                    <div class="auth-content">
+                        <div id="errorAlert" class="alert alert-error" style="display: none;"></div>
+
+                        <form id="loginForm">
+                            <!-- Registration Fields (hidden by default) -->
+                            <div id="registrationFields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="fullName">Full Name *</label>
+                                    <input type="text" id="fullName" placeholder="Enter your full name" required>
+                                </div>
+
+                                <div id="adminFields" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="schoolName">School Name *</label>
+                                        <input type="text" id="schoolName" placeholder="Enter your school name" required>
+                                    </div>
+                                </div>
+
+                                <div id="teacherFields" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="phoneNumber">Phone Number</label>
+                                        <input type="tel" id="phoneNumber" placeholder="Enter your phone number">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="teacherCode">Teacher Code *</label>
+                                        <input type="text" id="teacherCode" placeholder="Enter teacher code provided by admin" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="department">Department/Subject</label>
+                                        <input type="text" id="department" placeholder="e.g., Mathematics, English, Science">
+                                    </div>
+                                </div>
+
+                                <div id="studentFields" style="display: none;">
+                                    <div class="form-group">
+                                        <label for="studentClass">Class *</label>
+                                        <select id="studentClass" required>
+                                            <option value="">Select your class</option>
+                                            <option value="JSS1A">JSS1A</option>
+                                            <option value="JSS1B">JSS1B</option>
+                                            <option value="JSS2A">JSS2A</option>
+                                            <option value="JSS2B">JSS2B</option>
+                                            <option value="JSS3A">JSS3A</option>
+                                            <option value="JSS3B">JSS3B</option>
+                                            <option value="SS1A">SS1A</option>
+                                            <option value="SS1B">SS1B</option>
+                                            <option value="SS2A">SS2A</option>
+                                            <option value="SS2B">SS2B</option>
+                                            <option value="SS3A">SS3A</option>
+                                            <option value="SS3B">SS3B</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="studentId">Student ID (Optional)</label>
+                                        <input type="text" id="studentId" placeholder="Enter your student ID if available">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Common Fields -->
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input type="email" id="email" placeholder="Enter your email" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <div class="password-input">
+                                    <input type="password" id="password" placeholder="Enter your password" required>
+                                    <button type="button" id="togglePassword" class="password-toggle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="confirmPasswordGroup" class="form-group" style="display: none;">
+                                <label for="confirmPassword">Confirm Password</label>
+                                <input type="password" id="confirmPassword" placeholder="Confirm your password">
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="btn btn-primary btn-full">
+                                <span id="submitText">Sign In</span>
+                                <i id="submitLoader" class="fas fa-spinner fa-spin" style="display: none;"></i>
+                            </button>
+                        </form>
+
+                        <div id="socialLogin">
+                            <div class="divider">
+                                <span>Or continue with</span>
+                            </div>
+
+                            <div class="social-buttons">
+                                <button id="googleBtn" class="btn btn-outline">
+                                    <i class="fab fa-google"></i>
+                                    Google
+                                </button>
+                                <button id="microsoftBtn" class="btn btn-outline">
+                                    <i class="fab fa-microsoft"></i>
+                                    Microsoft
+                                </button>
+                            </div>
+
+                            <button id="guestBtn" class="btn btn-outline btn-full">
+                                <i class="fas fa-user-check"></i>
+                                Continue as Guest
+                            </button>
+                        </div>
+
+                        <div class="auth-links">
+                            <button id="toggleAuthMode" class="link-btn">Don't have an account? Register</button>
+                            <button id="forgotPassword" class="link-btn">Forgot your password?</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Codes Display -->
+                <div id="adminCodes" class="auth-card" style="display: none;">
+                    <div class="auth-header">
+                        <img src="images/logo.png" alt="El Bethel Academy" class="auth-logo">
+                        <h2 class="success-title">Admin Account Created!</h2>
+                        <p>Save these codes securely - you'll need them to manage your school</p>
+                    </div>
+
+                    <div class="codes-container">
+                        <div class="code-item school-code">
+                            <div class="code-info">
+                                <label>School Code</label>
+                                <p id="schoolCodeValue" class="code-value"></p>
+                            </div>
+                            <button id="copySchoolCode" class="copy-btn">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+
+                        <div class="code-item admin-code">
+                            <div class="code-info">
+                                <label>Admin Code</label>
+                                <p id="adminCodeValue" class="code-value"></p>
+                            </div>
+                            <button id="copyAdminCode" class="copy-btn">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <strong>Important:</strong> Share the School Code with teachers for registration. Keep the Admin Code private for administrative access.
+                    </div>
+
+                    <button id="continueToAdmin" class="btn btn-primary btn-full">
+                        Continue to Admin Dashboard
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen" style="display: none;">
+        <div class="loading-content">
+            <img src="images/logo.png" alt="El Bethel Academy" class="loading-logo">
+            <div class="loading-text">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Loading your portal...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
