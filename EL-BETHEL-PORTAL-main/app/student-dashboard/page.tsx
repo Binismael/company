@@ -71,7 +71,7 @@ export default function StudentDashboard() {
           .from('students')
           .select(`
             *,
-            class:classes(name, form_level),
+            class:classes(name),
             user:users(full_name, email)
           `)
           .eq('user_id', user.id)
