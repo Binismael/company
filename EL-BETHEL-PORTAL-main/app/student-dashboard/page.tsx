@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp } from 'lucide-react'
+import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 
 interface Student {
@@ -67,7 +67,6 @@ export default function StudentDashboard() {
           return
         }
 
-        // Get student profile
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select(`
@@ -81,7 +80,6 @@ export default function StudentDashboard() {
         if (studentError) throw studentError
         setStudent(studentData)
 
-        // Get results
         const { data: resultsData, error: resultsError } = await supabase
           .from('results')
           .select(`
@@ -94,7 +92,6 @@ export default function StudentDashboard() {
         if (resultsError) throw resultsError
         setResults(resultsData)
 
-        // Get attendance
         const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendance')
           .select(`
@@ -108,7 +105,6 @@ export default function StudentDashboard() {
         if (attendanceError) throw attendanceError
         setAttendance(attendanceData)
 
-        // Get assignments
         const { data: assignmentsData, error: assignmentsError } = await supabase
           .from('assignments')
           .select(`
@@ -167,24 +163,9 @@ export default function StudentDashboard() {
     }
   }
 
-  const getAttendanceColor = (status: string) => {
-    switch (status) {
-      case 'Present':
-        return 'text-green-600'
-      case 'Absent':
-        return 'text-red-600'
-      case 'Late':
-        return 'text-yellow-600'
-      case 'Excused':
-        return 'text-blue-600'
-      default:
-        return 'text-gray-600'
-    }
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
@@ -193,31 +174,30 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-start gap-4">
-            <div>
-              <h1 className="text-3xl font-bold">
-                Welcome, {student?.user.full_name}
-              </h1>
-              <div className="mt-2 space-y-1 text-primary-100">
-                <p className="text-sm">
-                  {student?.class.form_level} • {student?.class.name}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-bold text-white">⚜</span>
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  Welcome, {student?.user.full_name?.split(' ')[0]}
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  Student • ID: {student?.reg_number || student?.admission_number}
                 </p>
-                {student?.reg_number && (
-                  <p className="text-sm font-mono">
-                    Reg. No: <strong>{student.reg_number}</strong>
-                  </p>
-                )}
               </div>
             </div>
             <Button
               variant="outline"
               onClick={handleLogout}
-              className="gap-2 text-white border-white hover:bg-primary-700"
+              className="gap-2"
+              size="sm"
             >
               <LogOut className="h-4 w-4" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
@@ -232,322 +212,257 @@ export default function StudentDashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="border-l-4 border-l-primary-600">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+          <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <Award className="h-4 w-4" />
-                Average Score
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                Current GPA
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary-600">
-                {calculateAverageScore()}%
+              <div className="text-2xl sm:text-3xl font-bold text-primary-600">
+                4.57
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {results.length} results recorded
+                Overall performance
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-600">
+          <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                Overall Grade
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-bold text-amber-600">
+                A
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Excellent standing
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                Class Position
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl sm:text-3xl font-bold text-blue-600">
+                3rd
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Out of 45 students
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
                 Attendance
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-2xl sm:text-3xl font-bold text-green-600">
                 {calculateAttendancePercentage()}%
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {attendance.length} records
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-blue-600">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <BookOpen className="h-4 w-4" />
-                Subjects
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">
-                {results.length > 0
-                  ? new Set(results.map((r) => r.subject.code)).size
-                  : 0}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                taking this term
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-orange-600">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Pending
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-600">
-                {assignments.filter(a => a.status === 'Not Submitted').length}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                assignments due
+                Present this month
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="results" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
-            <TabsTrigger value="results" className="gap-2">
-              <Award className="h-4 w-4" />
-              <span className="hidden sm:inline">Results</span>
-            </TabsTrigger>
-            <TabsTrigger value="attendance" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Attendance</span>
-            </TabsTrigger>
-            <TabsTrigger value="assignments" className="gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Assignments</span>
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="gap-2">
-              <BookOpen className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Results Tab */}
-          <TabsContent value="results" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>Academic Results</CardTitle>
-                    <CardDescription>
-                      Your grades and scores by subject
-                    </CardDescription>
+        {/* AI Learning Assistant Section */}
+        <Card className="border-0 shadow-sm mb-8 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-lg">🤖</span>
+              AI Learning Assistant
+            </CardTitle>
+            <CardDescription>
+              Personalized recommendations and study guidance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Focus Area 1 */}
+                <div className="bg-white rounded-lg p-4 border border-red-200 bg-red-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 text-sm">Focus on Organic Chemistry</h3>
+                    <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
+                  <p className="text-xs text-gray-700 mb-3">
+                    You performed in organic chemistry topics needs improvement
+                  </p>
+                  <Button size="sm" variant="outline" className="w-full text-xs">
+                    Start Practice
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {results.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No results available yet
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="text-left py-3 px-4 font-medium">Subject</th>
-                          <th className="text-left py-3 px-4 font-medium">Score</th>
-                          <th className="text-left py-3 px-4 font-medium">Grade</th>
-                          <th className="text-left py-3 px-4 font-medium">Term</th>
-                          <th className="text-left py-3 px-4 font-medium">Session</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {results.map((result) => (
-                          <tr
-                            key={result.id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="py-3 px-4 font-medium">
-                              {result.subject.name}
-                            </td>
-                            <td className="py-3 px-4">{result.score}%</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 rounded text-xs font-semibold ${getGradeColor(result.grade)}`}>
-                                {result.grade}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-gray-600">{result.term}</td>
-                            <td className="py-3 px-4 text-gray-600">{result.session}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Attendance Tab */}
-          <TabsContent value="attendance" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>Attendance Records</CardTitle>
-                    <CardDescription>
-                      Your attendance history
-                    </CardDescription>
+                {/* Focus Area 2 */}
+                <div className="bg-white rounded-lg p-4 border border-green-200 bg-green-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 text-sm">Excellent in Calculus</h3>
+                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-green-600">{calculateAttendancePercentage()}%</p>
-                    <p className="text-xs text-gray-600">Attendance Rate</p>
+                  <p className="text-xs text-gray-700 mb-3">
+                    You're performing exceptionally well in calculus topics
+                  </p>
+                  <Button size="sm" variant="outline" className="w-full text-xs">
+                    Advanced Problems
+                  </Button>
+                </div>
+
+                {/* Focus Area 3 */}
+                <div className="bg-white rounded-lg p-4 border border-blue-200 bg-blue-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 text-sm">Physics Assignment Due</h3>
+                    <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  </div>
+                  <p className="text-xs text-gray-700 mb-3">
+                    Don't forget physics assignment due tomorrow
+                  </p>
+                  <Button size="sm" variant="outline" className="w-full text-xs">
+                    Submit Now
+                  </Button>
+                </div>
+              </div>
+
+              {/* Chat Section */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-lg">💬</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">Ask AI Tutor</p>
+                    <p className="text-xs text-gray-600">Get instant help with your studies</p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {attendance.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No attendance records available
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="text-left py-3 px-4 font-medium">Date</th>
-                          <th className="text-left py-3 px-4 font-medium">Status</th>
-                          <th className="text-left py-3 px-4 font-medium">Class</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {attendance.map((record) => (
-                          <tr
-                            key={record.id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="py-3 px-4">
-                              {new Date(
-                                record.attendance_date
-                              ).toLocaleDateString('en-US', { 
-                                weekday: 'short',
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className={`font-semibold ${getAttendanceColor(record.status)}`}>
-                                {record.status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-gray-600">
-                              {record.class.name}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  Chat Now
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Assignments Tab */}
-          <TabsContent value="assignments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assignments</CardTitle>
-                <CardDescription>
-                  Your current assignments and submissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {assignments.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No assignments available
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {assignments.map((assignment) => (
-                      <div
-                        key={assignment.id}
-                        className="p-4 border rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">
-                              {assignment.title}
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {assignment.subject.name}
-                            </p>
-                          </div>
-                          <Badge variant={assignment.status === 'Submitted' ? 'default' : 'outline'}>
-                            {assignment.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Due: {new Date(assignment.due_date).toLocaleDateString()}
-                        </p>
+        {/* Navigation Tabs */}
+        <Tabs defaultValue="exam" className="w-full mb-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
+            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+              Academics
+            </button>
+            <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
+              Exam
+            </button>
+            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+              Payments
+            </button>
+            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+              Assignments
+            </button>
+          </div>
+
+          {/* Upcoming Exams */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Upcoming Exams</h2>
+              <p className="text-sm text-gray-600 mb-4">Your scheduled CBT and practical exams</p>
+
+              <div className="space-y-3">
+                {/* Exam 1 */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">Mathematics</h3>
+                        <p className="text-sm text-gray-600 mt-1">2024-01-15 • 2 hours</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Student Profile</CardTitle>
-                <CardDescription>
-                  Your account information
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Full Name</p>
-                    <p className="font-semibold text-lg mt-1">{student?.user.full_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Email</p>
-                    <p className="font-semibold text-lg mt-1">{student?.user.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Registration Number</p>
-                    <p className="font-semibold text-lg font-mono mt-1">
-                      {student?.reg_number || student?.admission_number}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Class</p>
-                    <p className="font-semibold text-lg mt-1">{student?.class.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Form Level</p>
-                    <p className="font-semibold text-lg mt-1">{student?.class.form_level}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Gender</p>
-                    <p className="font-semibold text-lg mt-1">{student?.gender || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600 uppercase tracking-wide">Date of Birth</p>
-                    <p className="font-semibold text-lg mt-1">
-                      {student?.date_of_birth
-                        ? new Date(
-                            student.date_of_birth
-                          ).toLocaleDateString()
-                        : 'Not set'}
-                    </p>
+                    </div>
+                    <Badge className="bg-blue-600 text-white whitespace-nowrap">CBT</Badge>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+
+                {/* Exam 2 */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">Physics</h3>
+                        <p className="text-sm text-gray-600 mt-1">2024-01-17 • 1.5 hours</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-blue-600 text-white whitespace-nowrap">CBT</Badge>
+                  </div>
+                </div>
+
+                {/* Exam 3 */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <Calendar className="h-5 w-5 text-amber-600 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">Chemistry</h3>
+                        <p className="text-sm text-gray-600 mt-1">2024-01-20 • 3 hours</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-amber-600 text-white whitespace-nowrap">Practical</Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Exam Preparation */}
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Exam Preparation</h2>
+              <p className="text-sm text-gray-600 mb-4">AI-powered study recommendations</p>
+
+              <div className="space-y-3">
+                {/* Status 1 */}
+                <div className="bg-white rounded-lg p-4 border-l-4 border-l-green-600">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">Ready for Mathematics</h3>
+                      <p className="text-sm text-gray-600 mt-1">You've completed 85% of practice questions</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status 2 */}
+                <div className="bg-white rounded-lg p-4 border-l-4 border-l-amber-600">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">Physics Needs Attention</h3>
+                      <p className="text-sm text-gray-600 mt-1">Focus on electromagnetic waves topic</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status 3 */}
+                <div className="bg-white rounded-lg p-4 border-l-4 border-l-red-600">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">Chemistry Practice Needed</h3>
+                      <p className="text-sm text-gray-600 mt-1">Complete organic chemistry exercises</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </Tabs>
       </div>
     </div>
