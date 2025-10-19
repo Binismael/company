@@ -333,9 +333,9 @@ export default function StudentDashboard() {
                   <p className="text-xs text-gray-700 mb-3">
                     Don't forget physics assignment due tomorrow
                   </p>
-                  <Button size="sm" variant="outline" className="w-full text-xs">
+                  <a href="/assignments" className="inline-flex items-center justify-center w-full rounded-md border px-3 py-2 text-xs hover:bg-gray-50">
                     Submit Now
-                  </Button>
+                  </a>
                 </div>
               </div>
 
