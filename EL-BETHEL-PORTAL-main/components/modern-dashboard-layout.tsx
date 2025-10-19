@@ -151,8 +151,12 @@ export function ModernDashboardLayout({ children, title, subtitle, actions }: Mo
               </Sheet>
 
               <div className="flex items-center space-x-3">
-                <div className="h-8 w-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">EB</span>
+                <div className="h-8 w-8 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                  <img
+                    src="https://cdn.builder.io/api/v1/image/assets%2Fbd2820205fb947eb8af5752a50d16f87%2F5bda342765554afe869b9b86f5b4343a?format=webp&width=128"
+                    alt="El-Bethel Academy Logo"
+                    className="h-8 w-8 object-contain"
+                  />
                 </div>
                 <div className="hidden sm:block">
                   <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
