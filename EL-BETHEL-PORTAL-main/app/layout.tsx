@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   authors: [{ name: "El Bethel Academy" }],
   creator: "El Bethel Academy",
   publisher: "El Bethel Academy",
+  icons: {
+    icon: "https://cdn.builder.io/api/v1/image/assets%2Fbd2820205fb947eb8af5752a50d16f87%2F5bda342765554afe869b9b86f5b4343a?format=webp&width=64",
+  },
   formatDetection: {
     email: false,
     address: false,
