@@ -370,9 +370,9 @@ export default function StudentDashboard() {
             <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
               Payments
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <a href="/assignments" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded whitespace-nowrap">
               Assignments
-            </button>
+            </a>
           </div>
 
           {/* Upcoming Exams */}
