@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Brain, Zap, Shield, Users, BookOpen } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 
 export default function RegisterPage() {
@@ -44,7 +45,6 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      // Validate inputs
       if (formData.password !== formData.confirmPassword) {
         throw new Error('Passwords do not match')
       }
@@ -53,7 +53,6 @@ export default function RegisterPage() {
         throw new Error('Password must be at least 6 characters')
       }
 
-      // Sign up user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -68,7 +67,6 @@ export default function RegisterPage() {
       if (authError) throw new Error(authError.message)
 
       if (authData.user) {
-        // Create user record in users table
         const { error: dbError } = await supabase
           .from('users')
           .insert([
@@ -83,7 +81,6 @@ export default function RegisterPage() {
 
         if (dbError) throw new Error(dbError.message)
 
-        // If student, create student record
         if (formData.role === 'student') {
           const { error: studentError } = await supabase
             .from('students')
@@ -97,7 +94,6 @@ export default function RegisterPage() {
           if (studentError) throw new Error(studentError.message)
         }
 
-        // Show success message and redirect to login
         alert('Registration successful! Please log in.')
         router.push('/auth/login')
       }
@@ -108,21 +104,102 @@ export default function RegisterPage() {
     }
   }
 
+  const features = [
+    {
+      icon: Brain,
+      title: 'AI-Powered Learning',
+      description: 'Personalized education with advanced AI tutoring',
+    },
+    {
+      icon: Zap,
+      title: 'Real-time Collaboration',
+      description: 'Interactive classrooms and instant feedback',
+    },
+    {
+      icon: Shield,
+      title: 'Advanced Security',
+      description: 'Secure authentication and protected data',
+    },
+  ]
+
+  const stats = [
+    { label: 'Active Students', value: '1,200+', icon: Users },
+    { label: 'Expert Teachers', value: '85+', icon: BookOpen },
+  ]
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 flex items-center justify-center p-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-700 mb-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
+      {/* Header Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg mb-4">
+            <span className="text-xl font-bold text-primary-600">⚜</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
             El Bethel Academy
           </h1>
-          <p className="text-gray-600">Next-Generation Learning Platform</p>
+          <p className="text-xl text-secondary-500 font-medium">
+            Next-Generation Learning Platform
+          </p>
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
+        {/* Stats and Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+          {/* Stats */}
+          {stats.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <div key={stat.label} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                <div className="flex items-start gap-3">
+                  <Icon className="h-6 w-6 text-primary-600 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-600">{stat.label}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Features */}
+          {features.map((feature) => {
+            const Icon = feature.icon
+            return (
+              <div key={feature.title} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                <Icon className="h-6 w-6 text-primary-600 mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-1">{feature.title}</h3>
+                <p className="text-sm text-gray-600">{feature.description}</p>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2 justify-center mb-12">
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            🤖 AI-Enhanced
+          </Badge>
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            ☁️ Cloud-Native
+          </Badge>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            📱 Mobile-First
+          </Badge>
+        </div>
+      </div>
+
+      {/* Register Section */}
+      <div className="max-w-md mx-auto px-4 pb-12">
+        <Card className="shadow-xl border-0 rounded-2xl">
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
+                <span className="text-xl font-bold text-white">⚜</span>
+              </div>
+            </div>
+            <CardTitle className="text-2xl">Create Account</CardTitle>
             <CardDescription>
-              Register to access the portal
+              Join El Bethel Academy today
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -134,22 +211,23 @@ export default function RegisterPage() {
               )}
 
               <div>
-                <label htmlFor="full_name" className="block text-sm font-medium mb-1">
+                <label htmlFor="full_name" className="block text-sm font-medium mb-1.5 text-gray-700">
                   Full Name
                 </label>
                 <Input
                   id="full_name"
                   name="full_name"
-                  placeholder="John Doe"
+                  placeholder="Enter your full name"
                   value={formData.full_name}
                   onChange={handleChange}
                   required
                   disabled={loading}
+                  className="rounded-lg"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-1">
+                <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-gray-700">
                   Email Address
                 </label>
                 <Input
@@ -161,15 +239,16 @@ export default function RegisterPage() {
                   onChange={handleChange}
                   required
                   disabled={loading}
+                  className="rounded-lg"
                 />
               </div>
 
               <div>
-                <label htmlFor="role" className="block text-sm font-medium mb-1">
-                  Role
+                <label htmlFor="role" className="block text-sm font-medium mb-1.5 text-gray-700">
+                  I am a...
                 </label>
                 <Select value={formData.role} onValueChange={handleRoleChange} disabled={loading}>
-                  <SelectTrigger id="role">
+                  <SelectTrigger id="role" className="rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -182,40 +261,45 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
+                <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-gray-700">
                   Password
                 </label>
                 <Input
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Create a strong password"
                   value={formData.password}
                   onChange={handleChange}
                   required
                   disabled={loading}
+                  className="rounded-lg"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Must be at least 6 characters long
+                </p>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5 text-gray-700">
                   Confirm Password
                 </label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
                   disabled={loading}
+                  className="rounded-lg"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11 text-white font-semibold rounded-lg bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 mt-6"
                 disabled={loading}
               >
                 {loading ? (
@@ -229,16 +313,23 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-sm">
-              <p className="text-gray-600">
+            {/* Links */}
+            <div className="mt-6 text-center text-sm">
+              <p className="text-gray-600 mb-3">
                 Already have an account?{' '}
-                <Link href="/auth/login" className="text-primary-600 hover:underline font-medium">
-                  Login here
+                <Link href="/auth/login" className="text-primary-600 hover:text-primary-700 font-medium">
+                  Sign in here
                 </Link>
               </p>
             </div>
           </CardContent>
         </Card>
+
+        {/* Footer */}
+        <div className="text-center mt-8 text-xs text-gray-600">
+          <p>Powered by Next.js 15 • Cloud Technology</p>
+          <p className="mt-1">© 2025 El Bethel Academy. All rights reserved.</p>
+        </div>
       </div>
     </div>
   )

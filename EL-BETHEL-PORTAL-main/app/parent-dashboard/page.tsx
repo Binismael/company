@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, Users, BookOpen, Award, Calendar, Download } from 'lucide-react'
+import { Loader2, LogOut, Users, BookOpen, Award, Calendar, Download, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 
 interface Student {
@@ -55,7 +55,6 @@ export default function ParentDashboard() {
           return
         }
 
-        // Get user info
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
@@ -69,8 +68,6 @@ export default function ParentDashboard() {
 
         setUser(userData)
 
-        // Get children (assuming parent has same email as student guardian)
-        // In a real system, you'd have a parent-child relationship table
         const { data: childrenData, error: childrenError } = await supabase
           .from('students')
           .select(`
@@ -99,7 +96,6 @@ export default function ParentDashboard() {
 
   const loadChildData = async (child: Student) => {
     try {
-      // Get results
       const { data: resultsData, error: resultsError } = await supabase
         .from('results')
         .select(`
@@ -112,7 +108,6 @@ export default function ParentDashboard() {
       if (resultsError) throw resultsError
       setChildResults(resultsData)
 
-      // Get attendance
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
@@ -152,7 +147,7 @@ export default function ParentDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
@@ -161,24 +156,30 @@ export default function ParentDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold">
-                Welcome, {user?.full_name}
-              </h1>
-              <p className="mt-2 text-primary-100">
-                Monitor your children's academic progress
-              </p>
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-bold text-white">⚜</span>
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  Welcome, {user?.full_name?.split(' ')[0]}
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  Parent • Monitor children's progress
+                </p>
+              </div>
             </div>
             <Button
               variant="outline"
               onClick={handleLogout}
-              className="gap-2 text-white border-white hover:bg-primary-700"
+              className="gap-2"
+              size="sm"
             >
               <LogOut className="h-4 w-4" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
@@ -202,17 +203,17 @@ export default function ParentDashboard() {
           <>
             {/* Child Selector */}
             <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">My Children</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">My Children</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {children.map((child) => (
                   <Button
                     key={child.id}
                     variant={selectedChild?.id === child.id ? 'default' : 'outline'}
                     onClick={() => handleSelectChild(child)}
-                    className="h-auto p-4 text-left justify-start flex-col items-start"
+                    className="h-auto p-4 text-left justify-start flex-col items-start rounded-lg"
                   >
-                    <span className="font-bold text-lg">{child.user.full_name}</span>
-                    <span className="text-xs opacity-75">{child.class.name}</span>
+                    <span className="font-bold text-sm">{child.user.full_name}</span>
+                    <span className="text-xs opacity-75 mt-1">{child.class.name}</span>
                   </Button>
                 ))}
               </div>
@@ -220,9 +221,9 @@ export default function ParentDashboard() {
 
             {selectedChild && (
               <>
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  <Card className="border-l-4 border-l-blue-600">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                  <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Award className="h-4 w-4" />
@@ -230,7 +231,7 @@ export default function ParentDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-blue-600">
+                      <div className="text-2xl sm:text-3xl font-bold text-primary-600">
                         {calculateAverageScore()}%
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -239,7 +240,7 @@ export default function ParentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-l-4 border-l-green-600">
+                  <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
@@ -247,7 +248,7 @@ export default function ParentDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-green-600">
+                      <div className="text-2xl sm:text-3xl font-bold text-green-600">
                         {calculateAttendancePercentage()}%
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -256,14 +257,14 @@ export default function ParentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-l-4 border-l-orange-600">
+                  <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600">
                         Class
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-orange-600">
+                      <div className="text-2xl sm:text-3xl font-bold text-orange-600">
                         {selectedChild.class.form_level}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -273,211 +274,202 @@ export default function ParentDashboard() {
                   </Card>
                 </div>
 
-                {/* Tabs */}
-                <Tabs defaultValue="results" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 mb-8">
-                    <TabsTrigger value="results" className="gap-2">
-                      <Award className="h-4 w-4" />
-                      <span className="hidden sm:inline">Results</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="attendance" className="gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span className="hidden sm:inline">Attendance</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="profile" className="gap-2">
-                      <Users className="h-4 w-4" />
-                      <span className="hidden sm:inline">Profile</span>
-                    </TabsTrigger>
-                  </TabsList>
+                {/* Navigation Tabs */}
+                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
+                  <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
+                    Results
+                  </button>
+                  <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+                    Attendance
+                  </button>
+                  <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+                    Profile
+                  </button>
+                </div>
 
-                  {/* Results Tab */}
-                  <TabsContent value="results" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle>Academic Results</CardTitle>
-                            <CardDescription>
-                              {selectedChild.user.full_name}'s grades and scores
-                            </CardDescription>
-                          </div>
-                          <Button variant="outline" size="sm" className="gap-2">
-                            <Download className="h-4 w-4" />
-                            Export
-                          </Button>
+                <div className="space-y-6">
+                  {/* Results Section */}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle>Academic Results</CardTitle>
+                          <CardDescription>
+                            {selectedChild.user.full_name}'s grades and scores
+                          </CardDescription>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        {childResults.length === 0 ? (
-                          <p className="text-gray-500 text-center py-8">
-                            No results available yet
-                          </p>
-                        ) : (
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Download className="h-4 w-4" />
+                          <span className="hidden sm:inline">Export</span>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {childResults.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">
+                          No results available yet
+                        </p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b">
+                              <tr>
+                                <th className="text-left py-3 px-4 font-medium">Subject</th>
+                                <th className="text-left py-3 px-4 font-medium">Score</th>
+                                <th className="text-left py-3 px-4 font-medium">Grade</th>
+                                <th className="text-left py-3 px-4 font-medium">Term</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {childResults.map((result) => (
+                                <tr
+                                  key={result.id}
+                                  className="border-b hover:bg-gray-50"
+                                >
+                                  <td className="py-3 px-4 font-medium text-gray-900">
+                                    {result.subject.name}
+                                  </td>
+                                  <td className="py-3 px-4 text-gray-600">{result.score}%</td>
+                                  <td className="py-3 px-4">
+                                    <Badge variant="secondary">
+                                      {result.grade}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 px-4 text-gray-600 text-xs">
+                                    {result.term}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Attendance Section */}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Attendance Summary</CardTitle>
+                      <CardDescription>
+                        {selectedChild.user.full_name}'s attendance record
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {childAttendance.length === 0 ? (
+                        <p className="text-gray-500 text-center py-8">
+                          No attendance records available
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                              <p className="text-2xl font-bold text-green-600">
+                                {childAttendance.filter(a => a.status === 'Present').length}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">Present</p>
+                            </div>
+                            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                              <p className="text-2xl font-bold text-red-600">
+                                {childAttendance.filter(a => a.status === 'Absent').length}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">Absent</p>
+                            </div>
+                            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                              <p className="text-2xl font-bold text-yellow-600">
+                                {childAttendance.filter(a => a.status === 'Late').length}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">Late</p>
+                            </div>
+                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                              <p className="text-2xl font-bold text-blue-600">
+                                {calculateAttendancePercentage()}%
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">Rate</p>
+                            </div>
+                          </div>
+
                           <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                               <thead className="bg-gray-50 border-b">
                                 <tr>
-                                  <th className="text-left py-3 px-4 font-medium">Subject</th>
-                                  <th className="text-left py-3 px-4 font-medium">Score</th>
-                                  <th className="text-left py-3 px-4 font-medium">Grade</th>
-                                  <th className="text-left py-3 px-4 font-medium">Term</th>
+                                  <th className="text-left py-3 px-4 font-medium">Date</th>
+                                  <th className="text-left py-3 px-4 font-medium">Status</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {childResults.map((result) => (
-                                  <tr
-                                    key={result.id}
-                                    className="border-b hover:bg-gray-50"
-                                  >
-                                    <td className="py-3 px-4 font-medium">
-                                      {result.subject.name}
-                                    </td>
-                                    <td className="py-3 px-4">{result.score}%</td>
-                                    <td className="py-3 px-4">
-                                      <Badge variant="secondary">
-                                        {result.grade}
-                                      </Badge>
-                                    </td>
+                                {childAttendance.slice(0, 20).map((record, idx) => (
+                                  <tr key={idx} className="border-b hover:bg-gray-50">
                                     <td className="py-3 px-4 text-gray-600">
-                                      {result.term}
+                                      {new Date(record.attendance_date).toLocaleDateString()}
+                                    </td>
+                                    <td className="py-3 px-4">
+                                      <Badge
+                                        variant={
+                                          record.status === 'Present'
+                                            ? 'default'
+                                            : record.status === 'Absent'
+                                            ? 'destructive'
+                                            : 'secondary'
+                                        }
+                                      >
+                                        {record.status}
+                                      </Badge>
                                     </td>
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Attendance Tab */}
-                  <TabsContent value="attendance" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Attendance Summary</CardTitle>
-                        <CardDescription>
-                          {selectedChild.user.full_name}'s attendance record
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {childAttendance.length === 0 ? (
-                          <p className="text-gray-500 text-center py-8">
-                            No attendance records available
-                          </p>
-                        ) : (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-4 gap-3 mb-6">
-                              <div className="p-3 bg-green-50 rounded-lg text-center">
-                                <p className="text-2xl font-bold text-green-600">
-                                  {childAttendance.filter(a => a.status === 'Present').length}
-                                </p>
-                                <p className="text-xs text-gray-600">Present</p>
-                              </div>
-                              <div className="p-3 bg-red-50 rounded-lg text-center">
-                                <p className="text-2xl font-bold text-red-600">
-                                  {childAttendance.filter(a => a.status === 'Absent').length}
-                                </p>
-                                <p className="text-xs text-gray-600">Absent</p>
-                              </div>
-                              <div className="p-3 bg-yellow-50 rounded-lg text-center">
-                                <p className="text-2xl font-bold text-yellow-600">
-                                  {childAttendance.filter(a => a.status === 'Late').length}
-                                </p>
-                                <p className="text-xs text-gray-600">Late</p>
-                              </div>
-                              <div className="p-3 bg-blue-50 rounded-lg text-center">
-                                <p className="text-2xl font-bold text-blue-600">
-                                  {calculateAttendancePercentage()}%
-                                </p>
-                                <p className="text-xs text-gray-600">Rate</p>
-                              </div>
-                            </div>
-
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead className="bg-gray-50 border-b">
-                                  <tr>
-                                    <th className="text-left py-3 px-4 font-medium">Date</th>
-                                    <th className="text-left py-3 px-4 font-medium">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {childAttendance.slice(0, 20).map((record, idx) => (
-                                    <tr key={idx} className="border-b hover:bg-gray-50">
-                                      <td className="py-3 px-4">
-                                        {new Date(record.attendance_date).toLocaleDateString()}
-                                      </td>
-                                      <td className="py-3 px-4">
-                                        <Badge
-                                          variant={
-                                            record.status === 'Present'
-                                              ? 'default'
-                                              : record.status === 'Absent'
-                                              ? 'destructive'
-                                              : 'secondary'
-                                          }
-                                        >
-                                          {record.status}
-                                        </Badge>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Profile Tab */}
-                  <TabsContent value="profile" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Student Profile</CardTitle>
-                        <CardDescription>
-                          {selectedChild.user.full_name}'s information
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <p className="text-xs text-gray-600 uppercase tracking-wide">Full Name</p>
-                            <p className="font-semibold text-lg mt-1">
-                              {selectedChild.user.full_name}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-600 uppercase tracking-wide">Email</p>
-                            <p className="font-semibold text-lg mt-1">
-                              {selectedChild.user.email}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-600 uppercase tracking-wide">Class</p>
-                            <p className="font-semibold text-lg mt-1">
-                              {selectedChild.class.name}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-600 uppercase tracking-wide">Form Level</p>
-                            <p className="font-semibold text-lg mt-1">
-                              {selectedChild.class.form_level}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-600 uppercase tracking-wide">Registration Number</p>
-                            <p className="font-semibold text-lg font-mono mt-1">
-                              {selectedChild.reg_number || selectedChild.admission_number}
-                            </p>
-                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Profile Section */}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Student Profile</CardTitle>
+                      <CardDescription>
+                        {selectedChild.user.full_name}'s information
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-xs text-gray-600 uppercase tracking-wide">Full Name</p>
+                          <p className="font-semibold text-lg mt-1 text-gray-900">
+                            {selectedChild.user.full_name}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 uppercase tracking-wide">Email</p>
+                          <p className="font-semibold text-lg mt-1 text-gray-900">
+                            {selectedChild.user.email}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 uppercase tracking-wide">Class</p>
+                          <p className="font-semibold text-lg mt-1 text-gray-900">
+                            {selectedChild.class.name}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 uppercase tracking-wide">Form Level</p>
+                          <p className="font-semibold text-lg mt-1 text-gray-900">
+                            {selectedChild.class.form_level}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 uppercase tracking-wide">Registration Number</p>
+                          <p className="font-semibold text-lg font-mono mt-1 text-gray-900">
+                            {selectedChild.reg_number || selectedChild.admission_number}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </>
             )}
           </>

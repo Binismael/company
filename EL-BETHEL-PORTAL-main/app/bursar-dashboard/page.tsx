@@ -67,7 +67,6 @@ export default function BursarDashboard() {
           return
         }
 
-        // Get user info
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
@@ -81,7 +80,6 @@ export default function BursarDashboard() {
 
         setUser(userData)
 
-        // Get all fees with student info
         const { data: feesData, error: feesError } = await supabase
           .from('fees')
           .select(`
@@ -93,7 +91,6 @@ export default function BursarDashboard() {
         if (feesError) throw feesError
         setFees(feesData)
 
-        // Get all payments with student info
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select(`
@@ -105,7 +102,6 @@ export default function BursarDashboard() {
         if (paymentsError) throw paymentsError
         setPayments(paymentsData)
 
-        // Calculate stats
         calculateStats(feesData, paymentsData)
       } catch (err: any) {
         setError(err.message || 'Failed to load data')
@@ -151,7 +147,6 @@ export default function BursarDashboard() {
 
       if (updateError) throw updateError
 
-      // Refresh payments
       const { data: updatedPayments } = await supabase
         .from('payments')
         .select(`
@@ -177,7 +172,7 @@ export default function BursarDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
@@ -186,24 +181,30 @@ export default function BursarDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold">
-                Bursar's Office
-              </h1>
-              <p className="mt-2 text-primary-100">
-                Financial management and payment tracking
-              </p>
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-bold text-white">⚜</span>
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  Bursar's Office
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  Financial management & payment tracking
+                </p>
+              </div>
             </div>
             <Button
               variant="outline"
               onClick={handleLogout}
-              className="gap-2 text-white border-white hover:bg-primary-700"
+              className="gap-2"
+              size="sm"
             >
               <LogOut className="h-4 w-4" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
@@ -221,73 +222,73 @@ export default function BursarDashboard() {
         {stats && (
           <>
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Financial Overview</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <Card className="border-l-4 border-l-blue-600">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">Financial Overview</h2>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                <Card className="border-0 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
                       Expected
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-lg sm:text-2xl font-bold text-blue-600">
                       ₦{(stats.totalExpected / 1000000).toFixed(2)}M
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-green-600">
+                <Card className="border-0 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center gap-2">
                       <CheckCircle className="h-4 w-4" />
                       Collected
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
+                    <div className="text-lg sm:text-2xl font-bold text-green-600">
                       ₦{(stats.totalCollected / 1000000).toFixed(2)}M
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-yellow-600">
+                <Card className="border-0 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center gap-2">
                       <AlertCircle className="h-4 w-4" />
                       Pending
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-yellow-600">
+                    <div className="text-lg sm:text-2xl font-bold text-yellow-600">
                       ₦{(stats.totalPending / 1000000).toFixed(2)}M
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-red-600">
+                <Card className="border-0 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center gap-2">
                       <AlertCircle className="h-4 w-4" />
                       Overdue
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-lg sm:text-2xl font-bold text-red-600">
                       ₦{(stats.totalOverdue / 1000000).toFixed(2)}M
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-purple-600">
+                <Card className="border-0 shadow-sm">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
                       Rate
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-lg sm:text-2xl font-bold text-purple-600">
                       {stats.collectionRate}%
                     </div>
                   </CardContent>
@@ -297,264 +298,249 @@ export default function BursarDashboard() {
           </>
         )}
 
-        {/* Tabs */}
-        <Tabs defaultValue="fees" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="fees" className="gap-2">
-              <DollarSign className="h-4 w-4" />
-              <span className="hidden sm:inline">Fees</span>
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="gap-2">
-              <CreditCard className="h-4 w-4" />
-              <span className="hidden sm:inline">Payments</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="gap-2">
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Reports</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
+          <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
+            Fees
+          </button>
+          <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            Payments
+          </button>
+          <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            Reports
+          </button>
+        </div>
 
-          {/* Fees Tab */}
-          <TabsContent value="fees" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fee Management</CardTitle>
-                <CardDescription>
-                  Manage student fees and payment status
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Input
-                    placeholder="Search student name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-3 py-2 border rounded-md"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Overdue">Overdue</option>
-                  </select>
-                </div>
+        <div className="space-y-6">
+          {/* Fees Section */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle>Fee Management</CardTitle>
+              <CardDescription>
+                Manage student fees and payment status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  placeholder="Search student name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 rounded-lg"
+                />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Partial">Partial</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Overdue">Overdue</option>
+                </select>
+              </div>
 
-                {filteredFees.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No fees found
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="text-left py-3 px-4 font-medium">Student</th>
-                          <th className="text-left py-3 px-4 font-medium">Term</th>
-                          <th className="text-left py-3 px-4 font-medium">Amount</th>
-                          <th className="text-left py-3 px-4 font-medium">Paid</th>
-                          <th className="text-left py-3 px-4 font-medium">Balance</th>
-                          <th className="text-left py-3 px-4 font-medium">Status</th>
-                          <th className="text-left py-3 px-4 font-medium">Due Date</th>
+              {filteredFees.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No fees found
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-medium">Student</th>
+                        <th className="text-left py-3 px-4 font-medium">Term</th>
+                        <th className="text-left py-3 px-4 font-medium">Amount</th>
+                        <th className="text-left py-3 px-4 font-medium">Paid</th>
+                        <th className="text-left py-3 px-4 font-medium">Balance</th>
+                        <th className="text-left py-3 px-4 font-medium">Status</th>
+                        <th className="text-left py-3 px-4 font-medium">Due Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredFees.map((fee) => (
+                        <tr key={fee.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium text-gray-900">
+                            {fee.student.user.full_name}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">{fee.term}</td>
+                          <td className="py-3 px-4 text-gray-600">₦{parseFloat(fee.amount).toLocaleString()}</td>
+                          <td className="py-3 px-4 text-green-600 font-medium">
+                            ₦{parseFloat(fee.paid_amount).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-red-600 font-medium">
+                            ₦{parseFloat(fee.balance).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge
+                              variant={
+                                fee.status === 'Paid'
+                                  ? 'default'
+                                  : fee.status === 'Partial'
+                                  ? 'secondary'
+                                  : fee.status === 'Overdue'
+                                  ? 'destructive'
+                                  : 'outline'
+                              }
+                            >
+                              {fee.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 text-xs">
+                            {new Date(fee.due_date).toLocaleDateString()}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {filteredFees.map((fee) => (
-                          <tr key={fee.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium">
-                              {fee.student.user.full_name}
-                            </td>
-                            <td className="py-3 px-4">{fee.term}</td>
-                            <td className="py-3 px-4">₦{parseFloat(fee.amount).toLocaleString()}</td>
-                            <td className="py-3 px-4 text-green-600 font-medium">
-                              ₦{parseFloat(fee.paid_amount).toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4 text-red-600 font-medium">
-                              ₦{parseFloat(fee.balance).toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4">
-                              <Badge
-                                variant={
-                                  fee.status === 'Paid'
-                                    ? 'default'
-                                    : fee.status === 'Partial'
-                                    ? 'secondary'
-                                    : fee.status === 'Overdue'
-                                    ? 'destructive'
-                                    : 'outline'
-                                }
-                              >
-                                {fee.status}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4 text-gray-600 text-xs">
-                              {new Date(fee.due_date).toLocaleDateString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Payments Tab */}
-          <TabsContent value="payments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>Payment Records</CardTitle>
-                    <CardDescription>
-                      Total payments: {payments.length}
-                    </CardDescription>
-                  </div>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Record Payment
-                  </Button>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {payments.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
-                    No payments recorded
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="text-left py-3 px-4 font-medium">Student</th>
-                          <th className="text-left py-3 px-4 font-medium">Amount</th>
-                          <th className="text-left py-3 px-4 font-medium">Method</th>
-                          <th className="text-left py-3 px-4 font-medium">Reference</th>
-                          <th className="text-left py-3 px-4 font-medium">Date</th>
-                          <th className="text-left py-3 px-4 font-medium">Status</th>
-                          <th className="text-left py-3 px-4 font-medium">Action</th>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Payments Section */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Payment Records</CardTitle>
+                  <CardDescription>
+                    Total payments: {payments.length}
+                  </CardDescription>
+                </div>
+                <Button size="sm" className="gap-2 bg-primary-600 hover:bg-primary-700">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Record Payment</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {payments.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No payments recorded
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-medium">Student</th>
+                        <th className="text-left py-3 px-4 font-medium">Amount</th>
+                        <th className="text-left py-3 px-4 font-medium">Method</th>
+                        <th className="text-left py-3 px-4 font-medium">Reference</th>
+                        <th className="text-left py-3 px-4 font-medium">Date</th>
+                        <th className="text-left py-3 px-4 font-medium">Status</th>
+                        <th className="text-left py-3 px-4 font-medium">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((payment) => (
+                        <tr key={payment.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium text-gray-900">
+                            {payment.student.user.full_name}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-green-600">
+                            ₦{parseFloat(payment.amount).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">{payment.payment_method}</td>
+                          <td className="py-3 px-4 font-mono text-xs text-gray-600">
+                            {payment.reference_number}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {new Date(payment.payment_date).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge
+                              variant={
+                                payment.verified ? 'default' : 'outline'
+                              }
+                            >
+                              {payment.verified ? 'Verified' : 'Pending'}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            {!payment.verified && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => verifyPayment(payment.id)}
+                                className="text-xs"
+                              >
+                                Verify
+                              </Button>
+                            )}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {payments.map((payment) => (
-                          <tr key={payment.id} className="border-b hover:bg-gray-50">
-                            <td className="py-3 px-4 font-medium">
-                              {payment.student.user.full_name}
-                            </td>
-                            <td className="py-3 px-4 font-semibold text-green-600">
-                              ₦{parseFloat(payment.amount).toLocaleString()}
-                            </td>
-                            <td className="py-3 px-4">{payment.payment_method}</td>
-                            <td className="py-3 px-4 font-mono text-xs">
-                              {payment.reference_number}
-                            </td>
-                            <td className="py-3 px-4 text-gray-600">
-                              {new Date(payment.payment_date).toLocaleDateString()}
-                            </td>
-                            <td className="py-3 px-4">
-                              <Badge
-                                variant={
-                                  payment.verified ? 'default' : 'outline'
-                                }
-                              >
-                                {payment.verified ? 'Verified' : 'Pending'}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">
-                              {!payment.verified && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => verifyPayment(payment.id)}
-                                >
-                                  Verify
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Reports Tab */}
-          <TabsContent value="reports" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Reports</CardTitle>
-                <CardDescription>
-                  Generate and download reports
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Download className="h-5 w-5" />
-                    <span className="text-sm">Fee Summary Report</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Download className="h-5 w-5" />
-                    <span className="text-sm">Payment History</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Download className="h-5 w-5" />
-                    <span className="text-sm">Overdue Report</span>
-                  </Button>
-                  <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2">
-                    <Download className="h-5 w-5" />
-                    <span className="text-sm">Monthly Statement</span>
-                  </Button>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Collection Summary</CardTitle>
-                <CardDescription>
-                  By payment method and status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
+          {/* Reports Section */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle>Financial Reports</CardTitle>
+              <CardDescription>
+                Generate and download reports
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 gap-3 sm:gap-4">
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
+                  <Download className="h-5 w-5" />
+                  <span className="text-xs text-center">Fee Summary Report</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
+                  <Download className="h-5 w-5" />
+                  <span className="text-xs text-center">Payment History</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
+                  <Download className="h-5 w-5" />
+                  <span className="text-xs text-center">Overdue Report</span>
+                </Button>
+                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
+                  <Download className="h-5 w-5" />
+                  <span className="text-xs text-center">Monthly Statement</span>
+                </Button>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">Collection Summary</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-gray-600">Cash</p>
-                    <p className="text-xl font-bold text-blue-600">
+                    <p className="text-lg font-bold text-blue-600 mt-1">
                       ₦{(payments.filter(p => p.payment_method === 'Cash').reduce((sum, p) => sum + parseFloat(p.amount), 0) / 1000000).toFixed(2)}M
                     </p>
                   </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                     <p className="text-sm text-gray-600">Bank Transfer</p>
-                    <p className="text-xl font-bold text-green-600">
+                    <p className="text-lg font-bold text-green-600 mt-1">
                       ₦{(payments.filter(p => p.payment_method === 'Bank Transfer').reduce((sum, p) => sum + parseFloat(p.amount), 0) / 1000000).toFixed(2)}M
                     </p>
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-lg">
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
                     <p className="text-sm text-gray-600">Verified</p>
-                    <p className="text-xl font-bold text-purple-600">
+                    <p className="text-lg font-bold text-purple-600 mt-1">
                       ₦{(payments.filter(p => p.verified).reduce((sum, p) => sum + parseFloat(p.amount), 0) / 1000000).toFixed(2)}M
                     </p>
                   </div>
-                  <div className="p-4 bg-orange-50 rounded-lg">
+                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
                     <p className="text-sm text-gray-600">Pending Verification</p>
-                    <p className="text-xl font-bold text-orange-600">
+                    <p className="text-lg font-bold text-orange-600 mt-1">
                       ₦{(payments.filter(p => !p.verified).reduce((sum, p) => sum + parseFloat(p.amount), 0) / 1000000).toFixed(2)}M
                     </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
