@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Loader2, LogOut, Users, BookOpen, Calendar, CheckCircle, Plus, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
+import { markAttendance } from '@/lib/db-queries'
+import { toast } from 'sonner'
 
 interface Class {
   id: string
@@ -67,6 +69,7 @@ export default function TeacherDashboard() {
   const [selectedStudentAttendance, setSelectedStudentAttendance] = useState<
     Record<string, string>
   >({})
+  const [submittingAttendance, setSubmittingAttendance] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -199,6 +202,34 @@ export default function TeacherDashboard() {
     router.push('/auth/login')
   }
 
+  const handleSubmitAttendance = async () => {
+    if (!selectedClass || !user) return
+    try {
+      setSubmittingAttendance(true)
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      if (!authUser) throw new Error('Not authenticated')
+
+      const promises = classStudents.map((st) =>
+        markAttendance(
+          st.id,
+          selectedClass.id,
+          attendanceDate,
+          (selectedStudentAttendance[st.id] as any) || 'Present',
+          authUser.id
+        )
+      )
+      await Promise.all(promises)
+      toast.success('Attendance submitted')
+      await loadClassData(selectedClass.id, authUser.id)
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to submit attendance')
+    } finally {
+      setSubmittingAttendance(false)
+    }
+  }
+
   const calculateAttendanceRate = () => {
     if (recentAttendance.length === 0) return 0
     const present = recentAttendance.filter(
@@ -222,8 +253,12 @@ export default function TeacherDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-white">⚜</span>
+              <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-white">
+                <img
+                  src="https://cdn.builder.io/api/v1/image/assets%2Fbd2820205fb947eb8af5752a50d16f87%2F5bda342765554afe869b9b86f5b4343a?format=webp&width=128"
+                  alt="El-Bethel Academy Logo"
+                  className="w-10 h-10 object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -455,9 +490,13 @@ export default function TeacherDashboard() {
                     </div>
                   </div>
 
-                  <Button className="w-full gap-2 bg-primary-600 hover:bg-primary-700">
-                    <CheckCircle className="h-4 w-4" />
-                    Submit Attendance
+                  <Button onClick={handleSubmitAttendance} disabled={submittingAttendance} className="w-full gap-2 bg-primary-600 hover:bg-primary-700">
+                    {submittingAttendance ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4" />
+                    )}
+                    {submittingAttendance ? 'Submitting...' : 'Submit Attendance'}
                   </Button>
                 </CardContent>
               </Card>
