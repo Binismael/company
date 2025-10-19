@@ -7,14 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, BookOpen, Calendar, Award } from 'lucide-react'
+import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
-import Link from 'next/link'
 
 interface Student {
   id: string
   user_id: string
   admission_number: string
+  reg_number?: string
+  date_of_birth?: string
+  gender?: string
   class: { name: string; form_level: string }
   user: { full_name: string; email: string }
 }
@@ -26,6 +28,7 @@ interface Result {
   grade: string
   term: string
   session: string
+  created_at: string
 }
 
 interface Attendance {
@@ -35,11 +38,20 @@ interface Attendance {
   class: { name: string }
 }
 
+interface Assignment {
+  id: string
+  title: string
+  subject: { name: string }
+  due_date: string
+  status: string
+}
+
 export default function StudentDashboard() {
   const router = useRouter()
   const [student, setStudent] = useState<Student | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [attendance, setAttendance] = useState<Attendance[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -91,10 +103,24 @@ export default function StudentDashboard() {
           `)
           .eq('student_id', studentData.id)
           .order('attendance_date', { ascending: false })
-          .limit(20)
+          .limit(30)
 
         if (attendanceError) throw attendanceError
         setAttendance(attendanceData)
+
+        // Get assignments
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            subject:subjects(name)
+          `)
+          .eq('class_id', studentData.class_id)
+          .order('due_date', { ascending: true })
+          .limit(10)
+
+        if (assignmentsError) throw assignmentsError
+        setAssignments(assignmentsData)
       } catch (err: any) {
         setError(err.message || 'Failed to load data')
       } finally {
@@ -118,16 +144,48 @@ export default function StudentDashboard() {
     return ((present / attendance.length) * 100).toFixed(1)
   }
 
-  const calculateGPA = () => {
+  const calculateAverageScore = () => {
     if (results.length === 0) return 0
     const total = results.reduce((sum, r) => sum + (r.score || 0), 0)
     return (total / results.length).toFixed(2)
   }
 
+  const getGradeColor = (grade: string) => {
+    switch (grade) {
+      case 'A':
+        return 'bg-green-100 text-green-800'
+      case 'B':
+        return 'bg-blue-100 text-blue-800'
+      case 'C':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'D':
+        return 'bg-orange-100 text-orange-800'
+      case 'F':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getAttendanceColor = (status: string) => {
+    switch (status) {
+      case 'Present':
+        return 'text-green-600'
+      case 'Absent':
+        return 'text-red-600'
+      case 'Late':
+        return 'text-yellow-600'
+      case 'Excused':
+        return 'text-blue-600'
+      default:
+        return 'text-gray-600'
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
   }
@@ -135,22 +193,28 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex justify-between items-start gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold">
                 Welcome, {student?.user.full_name}
               </h1>
-              <p className="text-gray-600 mt-1">
-                {student?.class.form_level} • {student?.class.name} •{' '}
-                {student?.admission_number}
-              </p>
+              <div className="mt-2 space-y-1 text-primary-100">
+                <p className="text-sm">
+                  {student?.class.form_level} • {student?.class.name}
+                </p>
+                {student?.reg_number && (
+                  <p className="text-sm font-mono">
+                    Reg. No: <strong>{student.reg_number}</strong>
+                  </p>
+                )}
+              </div>
             </div>
             <Button
               variant="outline"
               onClick={handleLogout}
-              className="gap-2"
+              className="gap-2 text-white border-white hover:bg-primary-700"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -168,27 +232,29 @@ export default function StudentDashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card className="border-l-4 border-l-primary-600">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Current GPA
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Award className="h-4 w-4" />
+                Average Score
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-primary-600">
-                {calculateGPA()}
+                {calculateAverageScore()}%
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Based on {results.length} subjects
+                {results.length} results recorded
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-green-600">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Attendance Rate
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Attendance
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -201,10 +267,11 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-blue-600">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Total Subjects
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Subjects
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -214,7 +281,24 @@ export default function StudentDashboard() {
                   : 0}
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Subjects taking
+                taking this term
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-orange-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Pending
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">
+                {assignments.filter(a => a.status === 'Not Submitted').length}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                assignments due
               </p>
             </CardContent>
           </Card>
@@ -222,18 +306,22 @@ export default function StudentDashboard() {
 
         {/* Tabs */}
         <Tabs defaultValue="results" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="results" className="gap-2">
               <Award className="h-4 w-4" />
-              Results
+              <span className="hidden sm:inline">Results</span>
             </TabsTrigger>
             <TabsTrigger value="attendance" className="gap-2">
               <Calendar className="h-4 w-4" />
-              Attendance
+              <span className="hidden sm:inline">Attendance</span>
+            </TabsTrigger>
+            <TabsTrigger value="assignments" className="gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Assignments</span>
             </TabsTrigger>
             <TabsTrigger value="profile" className="gap-2">
               <BookOpen className="h-4 w-4" />
-              Profile
+              <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
           </TabsList>
 
@@ -241,10 +329,18 @@ export default function StudentDashboard() {
           <TabsContent value="results" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Academic Results</CardTitle>
-                <CardDescription>
-                  Your grades and scores
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Academic Results</CardTitle>
+                    <CardDescription>
+                      Your grades and scores by subject
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {results.length === 0 ? (
@@ -253,24 +349,14 @@ export default function StudentDashboard() {
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="border-b">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Subject
-                          </th>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Score
-                          </th>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Grade
-                          </th>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Term
-                          </th>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Session
-                          </th>
+                          <th className="text-left py-3 px-4 font-medium">Subject</th>
+                          <th className="text-left py-3 px-4 font-medium">Score</th>
+                          <th className="text-left py-3 px-4 font-medium">Grade</th>
+                          <th className="text-left py-3 px-4 font-medium">Term</th>
+                          <th className="text-left py-3 px-4 font-medium">Session</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -279,23 +365,17 @@ export default function StudentDashboard() {
                             key={result.id}
                             className="border-b hover:bg-gray-50"
                           >
-                            <td className="py-2 px-4">
+                            <td className="py-3 px-4 font-medium">
                               {result.subject.name}
                             </td>
-                            <td className="py-2 px-4">{result.score}</td>
-                            <td className="py-2 px-4">
-                              <Badge
-                                variant={
-                                  result.grade === 'A'
-                                    ? 'default'
-                                    : 'secondary'
-                                }
-                              >
+                            <td className="py-3 px-4">{result.score}%</td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded text-xs font-semibold ${getGradeColor(result.grade)}`}>
                                 {result.grade}
-                              </Badge>
+                              </span>
                             </td>
-                            <td className="py-2 px-4">{result.term}</td>
-                            <td className="py-2 px-4">{result.session}</td>
+                            <td className="py-3 px-4 text-gray-600">{result.term}</td>
+                            <td className="py-3 px-4 text-gray-600">{result.session}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -310,10 +390,18 @@ export default function StudentDashboard() {
           <TabsContent value="attendance" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Attendance Records</CardTitle>
-                <CardDescription>
-                  Your attendance history
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Attendance Records</CardTitle>
+                    <CardDescription>
+                      Your attendance history
+                    </CardDescription>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-green-600">{calculateAttendancePercentage()}%</p>
+                    <p className="text-xs text-gray-600">Attendance Rate</p>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {attendance.length === 0 ? (
@@ -322,18 +410,12 @@ export default function StudentDashboard() {
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="border-b">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Date
-                          </th>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Status
-                          </th>
-                          <th className="text-left py-2 px-4 font-medium">
-                            Class
-                          </th>
+                          <th className="text-left py-3 px-4 font-medium">Date</th>
+                          <th className="text-left py-3 px-4 font-medium">Status</th>
+                          <th className="text-left py-3 px-4 font-medium">Class</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -342,31 +424,73 @@ export default function StudentDashboard() {
                             key={record.id}
                             className="border-b hover:bg-gray-50"
                           >
-                            <td className="py-2 px-4">
+                            <td className="py-3 px-4">
                               {new Date(
                                 record.attendance_date
-                              ).toLocaleDateString()}
+                              ).toLocaleDateString('en-US', { 
+                                weekday: 'short',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
                             </td>
-                            <td className="py-2 px-4">
-                              <Badge
-                                variant={
-                                  record.status === 'Present'
-                                    ? 'default'
-                                    : record.status === 'Absent'
-                                    ? 'destructive'
-                                    : 'secondary'
-                                }
-                              >
+                            <td className="py-3 px-4">
+                              <span className={`font-semibold ${getAttendanceColor(record.status)}`}>
                                 {record.status}
-                              </Badge>
+                              </span>
                             </td>
-                            <td className="py-2 px-4">
+                            <td className="py-3 px-4 text-gray-600">
                               {record.class.name}
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Assignments Tab */}
+          <TabsContent value="assignments" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Assignments</CardTitle>
+                <CardDescription>
+                  Your current assignments and submissions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {assignments.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">
+                    No assignments available
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {assignments.map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        className="p-4 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">
+                              {assignment.title}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {assignment.subject.name}
+                            </p>
+                          </div>
+                          <Badge variant={assignment.status === 'Submitted' ? 'default' : 'outline'}>
+                            {assignment.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Due: {new Date(assignment.due_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -382,31 +506,37 @@ export default function StudentDashboard() {
                   Your account information
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-gray-600">Full Name</p>
-                    <p className="font-medium">{student?.user.full_name}</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Full Name</p>
+                    <p className="font-semibold text-lg mt-1">{student?.user.full_name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Email</p>
-                    <p className="font-medium">{student?.user.email}</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Email</p>
+                    <p className="font-semibold text-lg mt-1">{student?.user.email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Admission Number</p>
-                    <p className="font-medium">{student?.admission_number}</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Registration Number</p>
+                    <p className="font-semibold text-lg font-mono mt-1">
+                      {student?.reg_number || student?.admission_number}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Class</p>
-                    <p className="font-medium">{student?.class.name}</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Class</p>
+                    <p className="font-semibold text-lg mt-1">{student?.class.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Form Level</p>
-                    <p className="font-medium">{student?.class.form_level}</p>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Form Level</p>
+                    <p className="font-semibold text-lg mt-1">{student?.class.form_level}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Date of Birth</p>
-                    <p className="font-medium">
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Gender</p>
+                    <p className="font-semibold text-lg mt-1">{student?.gender || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600 uppercase tracking-wide">Date of Birth</p>
+                    <p className="font-semibold text-lg mt-1">
                       {student?.date_of_birth
                         ? new Date(
                             student.date_of_birth
