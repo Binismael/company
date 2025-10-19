@@ -118,8 +118,12 @@ export default function LoginPage() {
       {/* Header Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg mb-4">
-            <span className="text-xl font-bold text-primary-600">⚜</span>
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg mb-4 overflow-hidden">
+            <img
+              src="https://cdn.builder.io/api/v1/image/assets%2Fbd2820205fb947eb8af5752a50d16f87%2F5bda342765554afe869b9b86f5b4343a?format=webp&width=200"
+              alt="El-Bethel Academy Logo"
+              className="w-12 h-12 object-contain"
+            />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
             El Bethel Academy
@@ -179,8 +183,12 @@ export default function LoginPage() {
         <Card className="shadow-xl border-0 rounded-2xl">
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-                <span className="text-xl font-bold text-white">⚜</span>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden bg-white">
+                <img
+                  src="https://cdn.builder.io/api/v1/image/assets%2Fbd2820205fb947eb8af5752a50d16f87%2F5bda342765554afe869b9b86f5b4343a?format=webp&width=200"
+                  alt="El-Bethel Academy Logo"
+                  className="w-12 h-12 object-contain"
+                />
               </div>
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
