@@ -430,13 +430,26 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 pb-8">
-      {/* Header with Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Header with Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.back()}
+          className="gap-2 hover:bg-gray-100"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+      </div>
+
+      {/* Main Header with Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">Dashboard</h1>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">Admin Dashboard</h1>
           <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your school.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
