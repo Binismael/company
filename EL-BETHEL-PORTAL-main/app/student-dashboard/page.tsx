@@ -386,15 +386,15 @@ export default function StudentDashboard() {
         {/* Navigation Tabs */}
         <Tabs defaultValue="exam" className="w-full mb-8">
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <a href="/results" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded whitespace-nowrap">
               Academics
-            </button>
-            <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
+            </a>
+            <a href="/exams" className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
               Exam
-            </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            </a>
+            <a href="/fees" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded whitespace-nowrap">
               Payments
-            </button>
+            </a>
             <a href="/assignments" className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded whitespace-nowrap">
               Assignments
             </a>
