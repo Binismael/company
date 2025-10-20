@@ -721,55 +721,63 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Revenue Trends</CardTitle>
-              <CardDescription>Monthly revenue and fee collection</CardDescription>
+              <CardDescription>Daily revenue and fee collection</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `₦${(value / 1000000).toFixed(1)}M`} />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    fill="#1e40af"
-                    stroke="#1e40af"
-                    name="Total Revenue"
-                    opacity={0.6}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="fees"
-                    fill="#10b981"
-                    stroke="#10b981"
-                    name="Fee Collection"
-                    opacity={0.6}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {builtRevenueData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <AreaChart data={builtRevenueData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `₦${(value / 1000000).toFixed(2)}M`} />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      fill="#1e40af"
+                      stroke="#1e40af"
+                      name="Total Revenue"
+                      opacity={0.6}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="fees"
+                      fill="#10b981"
+                      stroke="#10b981"
+                      name="Fee Collection"
+                      opacity={0.6}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No revenue data available</p>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Enrollment Growth</CardTitle>
-              <CardDescription>Students and teachers growth over quarters</CardDescription>
+              <CardDescription>Students and teachers growth trends</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={enrollmentData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="quarter" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="students" fill="#1e40af" yAxisId="left" name="Students" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey="teachers" fill="#f59e0b" yAxisId="right" name="Teachers" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {enrollmentData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={enrollmentData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="quarter" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="students" fill="#1e40af" yAxisId="left" name="Students" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="teachers" fill="#f59e0b" yAxisId="right" name="Teachers" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No enrollment data available</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
