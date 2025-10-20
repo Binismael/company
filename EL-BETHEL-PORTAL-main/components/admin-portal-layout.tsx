@@ -24,6 +24,7 @@ import {
   Cog,
   ZapOff,
   X,
+  Sparkles,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'

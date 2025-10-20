@@ -10,7 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Plus, Search, Edit2, Trash2, Eye, EyeOff, Download, Upload, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Loader2, Plus, Search, Edit2, Trash2, Eye, EyeOff, Download, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface User {
@@ -20,6 +29,8 @@ interface User {
   role: string
   status: string
   created_at: string
+  last_login?: string
+  phone?: string
 }
 
 export default function UserManagementPage() {
@@ -28,10 +39,12 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newUser, setNewUser] = useState({
     fullName: '',
     email: '',
+    phone: '',
     role: 'student',
     password: '',
   })
@@ -129,8 +142,17 @@ export default function UserManagementPage() {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = selectedRole === 'all' || user.role === selectedRole
-    return matchesSearch && matchesRole
+    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus
+    return matchesSearch && matchesRole && matchesStatus
   })
+
+  const userStats = {
+    total: users.length,
+    students: users.filter(u => u.role === 'student').length,
+    teachers: users.filter(u => u.role === 'teacher').length,
+    active: users.filter(u => u.status === 'active').length,
+    suspended: users.filter(u => u.status === 'suspended').length,
+  }
 
   if (loading) {
     return (
@@ -145,13 +167,17 @@ export default function UserManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-2">Manage students, teachers, and parents</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2">
+            <Download className="w-4 h-4" />
+            Export
+          </Button>
+          <Button variant="outline" className="gap-2">
             <Upload className="w-4 h-4" />
-            Import CSV
+            Import
           </Button>
           <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
@@ -167,28 +193,40 @@ export default function UserManagementPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Full Name</label>
+                  <label className="text-sm font-medium">Full Name *</label>
                   <Input
                     placeholder="Enter full name"
                     value={newUser.fullName}
                     onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
+                    className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Email</label>
+                  <label className="text-sm font-medium">Email *</label>
                   <Input
                     type="email"
                     placeholder="Enter email"
                     value={newUser.email}
                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Role</label>
+                  <label className="text-sm font-medium">Phone</label>
+                  <Input
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={newUser.phone || ''}
+                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Role *</label>
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm"
+                    className="w-full px-3 py-2 border rounded-lg text-sm mt-1"
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
@@ -197,12 +235,13 @@ export default function UserManagementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Password</label>
+                  <label className="text-sm font-medium">Password *</label>
                   <Input
                     type="password"
                     placeholder="Enter password"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    className="mt-1"
                   />
                 </div>
                 <Button onClick={handleAddUser} className="w-full">
@@ -212,6 +251,40 @@ export default function UserManagementPage() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
+
+      {/* User Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">Total Users</p>
+            <p className="text-3xl font-bold mt-2">{userStats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">Students</p>
+            <p className="text-3xl font-bold text-blue-600 mt-2">{userStats.students}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">Teachers</p>
+            <p className="text-3xl font-bold text-green-600 mt-2">{userStats.teachers}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">Active</p>
+            <p className="text-3xl font-bold text-green-600 mt-2">{userStats.active}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">Suspended</p>
+            <p className="text-3xl font-bold text-red-600 mt-2">{userStats.suspended}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -238,6 +311,15 @@ export default function UserManagementPage() {
               <option value="parent">Parents</option>
               <option value="admin">Admins</option>
             </select>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="px-4 py-2 border rounded-lg text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
           </div>
         </CardContent>
       </Card>
@@ -246,72 +328,98 @@ export default function UserManagementPage() {
       <Card>
         <CardHeader>
           <CardTitle>All Users ({filteredUsers.length})</CardTitle>
+          <CardDescription>Manage user accounts and permissions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-sm">Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Email</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Role</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Joined</th>
-                  <th className="text-left py-3 px-4 font-medium text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4 font-medium">{user.full_name}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{user.email}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {user.role}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge
-                        className={`text-xs capitalize ${
-                          user.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {user.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleSuspendUser(user.id, user.status)}
-                          className="text-xs"
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      No users found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium flex items-center gap-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback>
+                            {user.full_name.split(' ').map((n) => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        {user.full_name}
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`text-xs capitalize ${
+                            user.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
                         >
-                          {user.status === 'active' ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-xs text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {user.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleSuspendUser(user.id, user.status)}
+                            className="h-8 w-8 p-0"
+                            title={user.status === 'active' ? 'Suspend' : 'Activate'}
+                          >
+                            {user.status === 'active' ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            title="Edit user"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="h-8 w-8 p-0 hover:text-red-600"
+                            title="Delete user"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
