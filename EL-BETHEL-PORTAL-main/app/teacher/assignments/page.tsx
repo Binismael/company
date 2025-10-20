@@ -11,31 +11,27 @@ import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { Loader2, Plus, AlertCircle, Search } from 'lucide-react'
 
-interface Exam {
+interface Assignment {
   id: string
   title: string
   description: string
   class: { name: string }
   subject: { name: string }
-  start_time: string
-  duration_minutes: number
-  total_marks: number
-  results_released: boolean
-  questions: { length: number }
-  attempts: { length: number }
+  due_date: string
+  submissions: { length: number }
   created_at: string
 }
 
-export default function ExamsPage() {
+export default function AssignmentsPage() {
   const router = useRouter()
-  const [exams, setExams] = useState<Exam[]>([])
-  const [filteredExams, setFilteredExams] = useState<Exam[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    const loadExams = async () => {
+    const loadAssignments = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser()
         if (!authUser) {
@@ -44,39 +40,38 @@ export default function ExamsPage() {
         }
 
         const { data, error: err } = await supabase
-          .from('exams')
+          .from('assignments')
           .select(`
             *,
             class:classes(name),
             subject:subjects(name),
-            questions:exam_questions(count),
-            attempts:exam_attempts(count)
+            submissions:assignment_submissions(count)
           `)
           .eq('teacher_id', authUser.id)
-          .order('created_at', { ascending: false })
+          .order('due_date', { ascending: false })
 
         if (err) throw err
-        setExams(data || [])
-        setFilteredExams(data || [])
+        setAssignments(data || [])
+        setFilteredAssignments(data || [])
       } catch (err: any) {
-        setError(err.message || 'Failed to load exams')
+        setError(err.message || 'Failed to load assignments')
       } finally {
         setLoading(false)
       }
     }
 
-    loadExams()
+    loadAssignments()
   }, [router])
 
   useEffect(() => {
-    const filtered = exams.filter(
-      e =>
-        e.title.toLowerCase().includes(search.toLowerCase()) ||
-        e.class.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.subject.name.toLowerCase().includes(search.toLowerCase())
+    const filtered = assignments.filter(
+      a =>
+        a.title.toLowerCase().includes(search.toLowerCase()) ||
+        a.class.name.toLowerCase().includes(search.toLowerCase()) ||
+        a.subject.name.toLowerCase().includes(search.toLowerCase())
     )
-    setFilteredExams(filtered)
-  }, [search, exams])
+    setFilteredAssignments(filtered)
+  }, [search, assignments])
 
   if (loading) {
     return (
@@ -86,17 +81,19 @@ export default function ExamsPage() {
     )
   }
 
+  const isOverdue = (dueDate: string) => new Date(dueDate) < new Date()
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Exams</h1>
-          <p className="text-gray-500 mt-1">Create and manage CBT exams</p>
+          <h1 className="text-3xl font-bold text-gray-900">Assignments</h1>
+          <p className="text-gray-500 mt-1">Create and manage class assignments</p>
         </div>
-        <Link href="/teacher/exams/new">
+        <Link href="/teacher/assignments/new">
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
-            Create Exam
+            Create Assignment
           </Button>
         </Link>
       </div>
@@ -119,17 +116,17 @@ export default function ExamsPage() {
         />
       </div>
 
-      {/* Exams Grid */}
-      {filteredExams.length === 0 ? (
+      {/* Assignments Grid */}
+      {filteredAssignments.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
               <p className="text-gray-500 mb-4">
-                {exams.length === 0 ? 'No exams created yet' : 'No exams match your search'}
+                {assignments.length === 0 ? 'No assignments created yet' : 'No assignments match your search'}
               </p>
-              {exams.length === 0 && (
-                <Link href="/teacher/exams/new">
-                  <Button>Create Your First Exam</Button>
+              {assignments.length === 0 && (
+                <Link href="/teacher/assignments/new">
+                  <Button>Create Your First Assignment</Button>
                 </Link>
               )}
             </div>
@@ -137,49 +134,40 @@ export default function ExamsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {filteredExams.map((exam) => (
-            <Card key={exam.id} className="hover:shadow-lg transition-shadow">
+          {filteredAssignments.map((assignment) => (
+            <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{exam.title}</CardTitle>
+                    <CardTitle className="text-lg">{assignment.title}</CardTitle>
                     <CardDescription className="mt-1">
-                      {exam.class.name} • {exam.subject.name}
+                      {assignment.class.name} • {assignment.subject.name}
                     </CardDescription>
                   </div>
                   <Badge
-                    variant={exam.results_released ? 'default' : 'secondary'}
+                    variant={isOverdue(assignment.due_date) ? 'destructive' : 'default'}
                   >
-                    {exam.results_released ? 'Released' : 'Pending'}
+                    {isOverdue(assignment.due_date) ? 'Overdue' : 'Active'}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-500">Questions</p>
-                      <p className="font-medium text-lg">{exam.questions?.length || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Attempts</p>
-                      <p className="font-medium text-lg">{exam.attempts?.length || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Duration</p>
-                      <p className="font-medium">{exam.duration_minutes} min</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Total Marks</p>
-                      <p className="font-medium">{exam.total_marks}</p>
-                    </div>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                  {assignment.description}
+                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm text-gray-500">
+                    <span className="font-medium">{assignment.submissions?.length || 0}</span> submissions
                   </div>
-                  <Link href={`/teacher/exams/${exam.id}`}>
-                    <Button variant="outline" className="w-full">
-                      Manage Exam
-                    </Button>
-                  </Link>
+                  <span className="text-sm text-gray-500">
+                    Due: {new Date(assignment.due_date).toLocaleDateString()}
+                  </span>
                 </div>
+                <Link href={`/teacher/assignments/${assignment.id}`}>
+                  <Button variant="outline" className="w-full">
+                    View & Grade
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

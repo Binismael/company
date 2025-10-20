@@ -472,6 +472,305 @@ export const createAnnouncement = async (
 }
 
 // ============================================
+// TEACHER EXAM QUERIES
+// ============================================
+
+export const createExam = async (
+  title: string,
+  subjectId: string,
+  classId: string,
+  teacherId: string,
+  description?: string,
+  startTime?: string,
+  endTime?: string,
+  durationMinutes?: number,
+  totalMarks?: number,
+  passingMarks?: number
+) => {
+  const { data, error } = await supabase
+    .from('exams')
+    .insert([
+      {
+        title,
+        subject_id: subjectId,
+        class_id: classId,
+        teacher_id: teacherId,
+        description,
+        start_time: startTime,
+        end_time: endTime,
+        duration_minutes: durationMinutes || 60,
+        total_marks: totalMarks || 100,
+        passing_marks: passingMarks || 40,
+      },
+    ])
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+export const getTeacherExams = async (teacherId: string) => {
+  const { data, error } = await supabase
+    .from('exams')
+    .select(`
+      *,
+      subject:subjects(name, code),
+      class:classes(name, form_level),
+      questions:exam_questions(count),
+      attempts:exam_attempts(count)
+    `)
+    .eq('teacher_id', teacherId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const getExamDetail = async (examId: string) => {
+  const { data, error } = await supabase
+    .from('exams')
+    .select(`
+      *,
+      subject:subjects(name, code),
+      class:classes(name, form_level)
+    `)
+    .eq('id', examId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getExamQuestions = async (examId: string) => {
+  const { data, error } = await supabase
+    .from('exam_questions')
+    .select('*')
+    .eq('exam_id', examId)
+    .order('order_index', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export const addExamQuestion = async (
+  examId: string,
+  questionText: string,
+  questionType: string,
+  options: Record<string, string> | null,
+  correctAnswer: string,
+  explanation?: string,
+  marks?: number,
+  orderIndex?: number
+) => {
+  const { data, error } = await supabase
+    .from('exam_questions')
+    .insert([
+      {
+        exam_id: examId,
+        question_text: questionText,
+        question_type: questionType,
+        options,
+        correct_answer: correctAnswer,
+        explanation,
+        marks: marks || 1,
+        order_index: orderIndex || 0,
+      },
+    ])
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+export const updateExamQuestion = async (
+  questionId: string,
+  updates: {
+    question_text?: string
+    options?: Record<string, string> | null
+    correct_answer?: string
+    explanation?: string
+    marks?: number
+  }
+) => {
+  const { data, error } = await supabase
+    .from('exam_questions')
+    .update(updates)
+    .eq('id', questionId)
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+export const deleteExamQuestion = async (questionId: string) => {
+  const { error } = await supabase
+    .from('exam_questions')
+    .delete()
+    .eq('id', questionId)
+
+  if (error) throw error
+}
+
+export const getExamAttempts = async (examId: string) => {
+  const { data, error } = await supabase
+    .from('exam_attempts')
+    .select(`
+      *,
+      student:students(user:users(full_name), admission_number),
+      answers:exam_answers(*)
+    `)
+    .eq('exam_id', examId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const getExamAttemptDetail = async (attemptId: string) => {
+  const { data, error } = await supabase
+    .from('exam_attempts')
+    .select(`
+      *,
+      student:students(user:users(full_name), admission_number),
+      exam:exams(*)
+    `)
+    .eq('id', attemptId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getAttemptAnswers = async (attemptId: string) => {
+  const { data, error } = await supabase
+    .from('exam_answers')
+    .select(`
+      *,
+      question:exam_questions(*)
+    `)
+    .eq('attempt_id', attemptId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export const gradeExamAttempt = async (
+  attemptId: string,
+  teacherId: string,
+  remarks?: string
+) => {
+  const { data, error } = await supabase
+    .from('teacher_results')
+    .insert([
+      {
+        attempt_id: attemptId,
+        teacher_id: teacherId,
+        remarks,
+      },
+    ])
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+export const releaseExamResults = async (examId: string) => {
+  const { data, error } = await supabase
+    .from('exams')
+    .update({ results_released: true })
+    .eq('id', examId)
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+export const getTeacherAssignments = async (teacherId: string) => {
+  const { data, error } = await supabase
+    .from('assignments')
+    .select(`
+      *,
+      subject:subjects(name, code),
+      class:classes(name, form_level),
+      submissions:assignment_submissions(count)
+    `)
+    .eq('teacher_id', teacherId)
+    .order('due_date', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const getAssignmentSubmissions = async (assignmentId: string) => {
+  const { data, error } = await supabase
+    .from('assignment_submissions')
+    .select(`
+      *,
+      student:students(user:users(full_name), admission_number)
+    `)
+    .eq('assignment_id', assignmentId)
+    .order('submitted_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const gradeAssignmentSubmission = async (
+  submissionId: string,
+  score: number,
+  feedback: string
+) => {
+  const { data, error } = await supabase
+    .from('assignment_submissions')
+    .update({
+      score,
+      feedback,
+      status: 'Graded',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', submissionId)
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+export const getTeacherProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('teachers')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const updateTeacherProfile = async (
+  userId: string,
+  updates: {
+    first_name?: string
+    last_name?: string
+    email?: string
+    phone?: string
+    photo_url?: string
+    bio?: string
+    specialization?: string
+    qualification?: string
+  }
+) => {
+  const { data, error } = await supabase
+    .from('teachers')
+    .update(updates)
+    .eq('user_id', userId)
+    .select()
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 
