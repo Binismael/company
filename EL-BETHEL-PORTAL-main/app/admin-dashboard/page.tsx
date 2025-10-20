@@ -84,6 +84,15 @@ export default function AdminDashboard() {
     systemAlerts: 4,
   })
 
+  const [previousStats] = useState({
+    totalStudents: 238,
+    feesCollected: 8200000,
+    attendanceRate: 89.2,
+  })
+
+  const [refreshing, setRefreshing] = useState(false)
+  const [selectedTimeRange, setSelectedTimeRange] = useState('week')
+
   const [recentRegistrations, setRecentRegistrations] = useState<RecentRegistration[]>([
     { id: '1', name: 'Chisom Okafor', role: 'Student', date: '2024-01-20' },
     { id: '2', name: 'Blessing Adeyemi', role: 'Teacher', date: '2024-01-19' },
@@ -122,6 +131,13 @@ export default function AdminDashboard() {
       timestamp: '2024-01-19 12:00 AM',
     },
   ])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    // Simulate refresh
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setRefreshing(false)
+  }, [])
 
   const attendanceData = [
     { name: 'Mon', attendance: 89 },
