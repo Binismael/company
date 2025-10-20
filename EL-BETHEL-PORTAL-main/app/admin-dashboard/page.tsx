@@ -690,14 +690,15 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-primary-50 to-secondary-50 border-primary-200">
               <CardHeader>
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardDescription>Common administrative tasks</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
                   variant="outline"
-                  className="w-full justify-start hover:bg-primary-50"
+                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
                   onClick={() => router.push('/admin/exams')}
                 >
                   <FileText className="w-4 h-4 mr-2" />
@@ -705,7 +706,7 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start hover:bg-primary-50"
+                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
                   onClick={() => router.push('/admin/users')}
                 >
                   <Users className="w-4 h-4 mr-2" />
@@ -713,7 +714,7 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start hover:bg-primary-50"
+                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
                   onClick={() => router.push('/admin/results')}
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
@@ -721,7 +722,7 @@ export default function AdminDashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-start hover:bg-primary-50"
+                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
                   onClick={() => router.push('/admin/announcements')}
                 >
                   <FileText className="w-4 h-4 mr-2" />
