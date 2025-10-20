@@ -417,6 +417,17 @@ export default function AdminDashboard() {
     </Card>
   )
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 animate-spin text-primary-600 mx-auto" />
+          <p className="text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8 pb-8">
       {/* Header with Controls */}
