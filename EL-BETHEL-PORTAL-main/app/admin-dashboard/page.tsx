@@ -468,18 +468,21 @@ export default function AdminDashboard() {
       </div>
 
       {/* Time Range Selector */}
-      <div className="flex gap-2">
-        {['today', 'week', 'month', 'year'].map((range) => (
-          <Button
-            key={range}
-            variant={selectedTimeRange === range ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedTimeRange(range)}
-            className="capitalize"
-          >
-            {range}
-          </Button>
-        ))}
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-sm font-medium text-gray-700">Filter by:</span>
+        <div className="flex flex-wrap gap-2">
+          {['today', 'week', 'month', 'year'].map((range) => (
+            <Button
+              key={range}
+              variant={selectedTimeRange === range ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedTimeRange(range)}
+              className="capitalize"
+            >
+              {range}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Quick Stats with Trends */}
