@@ -72,25 +72,116 @@ interface SystemAlert {
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
-    totalStudents: 245,
-    totalTeachers: 24,
-    totalClasses: 15,
-    feesCollected: 8500000,
-    outstandingFees: 2300000,
-    activeExams: 3,
-    attendanceRate: 92.5,
-    systemAlerts: 4,
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalClasses: 0,
+    feesCollected: 0,
+    outstandingFees: 0,
+    activeExams: 0,
+    attendanceRate: 0,
+    systemAlerts: 0,
   })
 
-  const [previousStats] = useState({
-    totalStudents: 238,
-    feesCollected: 8200000,
-    attendanceRate: 89.2,
+  const [previousStats, setPreviousStats] = useState({
+    totalStudents: 0,
+    feesCollected: 0,
+    attendanceRate: 0,
   })
 
   const [refreshing, setRefreshing] = useState(false)
   const [selectedTimeRange, setSelectedTimeRange] = useState('week')
+
+  // Fetch real data from Supabase
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+
+        // Get total students
+        const { count: studentCount } = await supabase
+          .from('students')
+          .select('*', { count: 'exact' })
+
+        // Get total teachers
+        const { count: teacherCount } = await supabase
+          .from('teachers')
+          .select('*', { count: 'exact' })
+
+        // Get total classes
+        const { count: classCount } = await supabase
+          .from('classes')
+          .select('*', { count: 'exact' })
+
+        // Get active exams (not released)
+        const { count: examCount } = await supabase
+          .from('exams')
+          .select('*', { count: 'exact' })
+          .eq('results_released', false)
+
+        // Get fees data
+        const { data: feesData } = await supabase
+          .from('fees')
+          .select('paid_amount, amount')
+
+        let feesCollected = 0
+        let totalFees = 0
+        feesData?.forEach(fee => {
+          feesCollected += fee.paid_amount || 0
+          totalFees += fee.amount || 0
+        })
+
+        const outstandingFees = totalFees - feesCollected
+
+        // Get attendance data for the current date
+        const today = new Date().toISOString().split('T')[0]
+        const { data: attendanceData, count: attendanceCount } = await supabase
+          .from('attendance')
+          .select('status', { count: 'exact' })
+          .eq('attendance_date', today)
+
+        let presentCount = 0
+        attendanceData?.forEach(record => {
+          if (record.status === 'Present' || record.status === 'Late') {
+            presentCount++
+          }
+        })
+
+        const attendanceRate = attendanceCount ? ((presentCount / attendanceCount) * 100) : 0
+
+        // Get system alerts count
+        const { count: alertCount } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact' })
+          .eq('read', false)
+
+        setStats({
+          totalStudents: studentCount || 0,
+          totalTeachers: teacherCount || 0,
+          totalClasses: classCount || 0,
+          feesCollected,
+          outstandingFees,
+          activeExams: examCount || 0,
+          attendanceRate: parseFloat(attendanceRate.toFixed(1)),
+          systemAlerts: alertCount || 0,
+        })
+
+        // Set previous stats (simulating last period)
+        setPreviousStats({
+          totalStudents: (studentCount || 0) - 7,
+          feesCollected: feesCollected - 300000,
+          attendanceRate: attendanceRate - 2.3,
+        })
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
 
   const [recentRegistrations] = useState<RecentRegistration[]>([
     { id: '1', name: 'Chisom Okafor', role: 'Student', date: '2024-01-20' },
