@@ -71,7 +71,7 @@ export default function ExamsPage() {
                   <Badge className="whitespace-nowrap">{e.exam_type || 'Written'}</Badge>
                 </div>
                 <div className="mt-3">
-                  <Button variant="outline" className="gap-2" disabled><Clock className="h-4 w-4" /> Start Exam</Button>
+                  <Link href={`/exams/${e.id}`} className="inline-flex items-center gap-2 px-3 py-2 border rounded-md hover:bg-gray-50"><Clock className="h-4 w-4" /> Start Exam</Link>
                 </div>
               </div>
             ))}
