@@ -357,16 +357,28 @@ export default function StudentDashboard() {
         {/* Navigation Tabs */}
         <Tabs defaultValue="exam" className="w-full mb-8">
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/results')}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+            >
               Academics
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/exams')}
+              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap hover:bg-gray-800 transition-colors"
+            >
               Exam
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/payments')}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+            >
               Payments
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/assignments')}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+            >
               Assignments
             </button>
           </div>
