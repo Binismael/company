@@ -355,42 +355,20 @@ export default function AdminDashboard() {
     fetchEnrollmentTrends()
   }, [])
 
-  const attendanceData = [
-    { name: 'Mon', attendance: 89, target: 95 },
-    { name: 'Tue', attendance: 91, target: 95 },
-    { name: 'Wed', attendance: 88, target: 95 },
-    { name: 'Thu', attendance: 94, target: 95 },
-    { name: 'Fri', attendance: 87, target: 95 },
-  ]
-
-  const feesData = [
+  // Build fees data from stats
+  const builtFeesData = [
     { name: 'Collected', value: stats.feesCollected, fill: '#10b981' },
     { name: 'Outstanding', value: stats.outstandingFees, fill: '#f59e0b' },
   ]
 
-  const classPerformanceData = [
-    { name: 'SS1A', avg: 78, target: 80 },
-    { name: 'SS1B', avg: 82, target: 80 },
-    { name: 'SS2A', avg: 81, target: 80 },
-    { name: 'SS2B', avg: 79, target: 80 },
-    { name: 'SS3A', avg: 88, target: 80 },
-    { name: 'SS3B', avg: 86, target: 80 },
-  ]
-
-  const revenueData = [
-    { month: 'Jan', revenue: 7200000, fees: 6500000 },
-    { month: 'Feb', revenue: 8100000, fees: 7800000 },
-    { month: 'Mar', revenue: 7900000, fees: 7200000 },
-    { month: 'Apr', revenue: 8500000, fees: 8200000 },
-    { month: 'May', revenue: 9200000, fees: 8500000 },
-    { month: 'Jun', revenue: 8900000, fees: 8600000 },
-  ]
-
-  const enrollmentData = [
-    { quarter: 'Q1', students: 210, teachers: 20 },
-    { quarter: 'Q2', students: 225, teachers: 22 },
-    { quarter: 'Q3', students: 235, teachers: 23 },
-    { quarter: 'Q4', students: 245, teachers: 24 },
+  // Build revenue data (simulated from fees for now)
+  const builtRevenueData = [
+    { month: 'Mon', revenue: stats.feesCollected * 0.3, fees: stats.feesCollected * 0.28 },
+    { month: 'Tue', revenue: stats.feesCollected * 0.35, fees: stats.feesCollected * 0.32 },
+    { month: 'Wed', revenue: stats.feesCollected * 0.32, fees: stats.feesCollected * 0.30 },
+    { month: 'Thu', revenue: stats.feesCollected * 0.38, fees: stats.feesCollected * 0.35 },
+    { month: 'Fri', revenue: stats.feesCollected * 0.40, fees: stats.feesCollected * 0.37 },
+    { month: 'Sat', revenue: stats.feesCollected * 0.25, fees: stats.feesCollected * 0.23 },
   ]
 
   const statChanges = useMemo(() => ({
