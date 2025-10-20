@@ -39,10 +39,12 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRole, setSelectedRole] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newUser, setNewUser] = useState({
     fullName: '',
     email: '',
+    phone: '',
     role: 'student',
     password: '',
   })
