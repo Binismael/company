@@ -140,11 +140,11 @@ export default function AdminDashboard() {
   }, [])
 
   const attendanceData = [
-    { name: 'Mon', attendance: 89 },
-    { name: 'Tue', attendance: 91 },
-    { name: 'Wed', attendance: 88 },
-    { name: 'Thu', attendance: 94 },
-    { name: 'Fri', attendance: 87 },
+    { name: 'Mon', attendance: 89, target: 95 },
+    { name: 'Tue', attendance: 91, target: 95 },
+    { name: 'Wed', attendance: 88, target: 95 },
+    { name: 'Thu', attendance: 94, target: 95 },
+    { name: 'Fri', attendance: 87, target: 95 },
   ]
 
   const feesData = [
@@ -153,19 +153,42 @@ export default function AdminDashboard() {
   ]
 
   const classPerformanceData = [
-    { name: 'SS1A', avg: 78 },
-    { name: 'SS1B', avg: 82 },
-    { name: 'SS2A', avg: 81 },
-    { name: 'SS2B', avg: 79 },
-    { name: 'SS3A', avg: 88 },
-    { name: 'SS3B', avg: 86 },
+    { name: 'SS1A', avg: 78, target: 80 },
+    { name: 'SS1B', avg: 82, target: 80 },
+    { name: 'SS2A', avg: 81, target: 80 },
+    { name: 'SS2B', avg: 79, target: 80 },
+    { name: 'SS3A', avg: 88, target: 80 },
+    { name: 'SS3B', avg: 86, target: 80 },
   ]
 
-  const StatCard = ({ icon: Icon, label, value, unit, color }: any) => (
-    <Card className="hover:shadow-lg transition-shadow">
+  const revenueData = [
+    { month: 'Jan', revenue: 7200000, fees: 6500000 },
+    { month: 'Feb', revenue: 8100000, fees: 7800000 },
+    { month: 'Mar', revenue: 7900000, fees: 7200000 },
+    { month: 'Apr', revenue: 8500000, fees: 8200000 },
+    { month: 'May', revenue: 9200000, fees: 8500000 },
+    { month: 'Jun', revenue: 8900000, fees: 8600000 },
+  ]
+
+  const enrollmentData = [
+    { quarter: 'Q1', students: 210, teachers: 20 },
+    { quarter: 'Q2', students: 225, teachers: 22 },
+    { quarter: 'Q3', students: 235, teachers: 23 },
+    { quarter: 'Q4', students: 245, teachers: 24 },
+  ]
+
+  // Memoized calculations for performance
+  const statChanges = useMemo(() => ({
+    studentChange: ((stats.totalStudents - previousStats.totalStudents) / previousStats.totalStudents * 100).toFixed(1),
+    feeChange: ((stats.feesCollected - previousStats.feesCollected) / previousStats.feesCollected * 100).toFixed(1),
+    attendanceChange: (stats.attendanceRate - previousStats.attendanceRate).toFixed(1),
+  }), [stats, previousStats])
+
+  const StatCard = ({ icon: Icon, label, value, unit, color, trend, trendValue }: any) => (
+    <Card className="hover:shadow-md transition-all hover:border-primary-200 border-transparent">
       <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
             <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
             <p className={`text-3xl font-bold ${color}`}>
               {typeof value === 'number' && value > 1000000
@@ -175,9 +198,15 @@ export default function AdminDashboard() {
                   : value}
             </p>
             {unit && <p className="text-xs text-gray-500 mt-1">{unit}</p>}
+            {trendValue && (
+              <div className={`flex items-center gap-1 mt-2 text-sm font-medium ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                {trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                {Math.abs(parseFloat(trendValue))}% vs last period
+              </div>
+            )}
           </div>
-          <div className={`p-3 rounded-lg ${color.includes('text') ? 'bg-blue-100' : 'bg-gray-100'}`}>
-            <Icon className="w-6 h-6 text-gray-600" />
+          <div className={`p-3 rounded-lg bg-gradient-to-br ${color.includes('blue') ? 'from-blue-100 to-blue-50' : color.includes('green') ? 'from-green-100 to-green-50' : color.includes('purple') ? 'from-purple-100 to-purple-50' : 'from-orange-100 to-orange-50'}`}>
+            <Icon className={`w-6 h-6 ${color}`} />
           </div>
         </div>
       </CardContent>
