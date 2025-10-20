@@ -43,7 +43,6 @@ import {
   RefreshCw,
   Zap,
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 interface DashboardStats {
   totalStudents: number
