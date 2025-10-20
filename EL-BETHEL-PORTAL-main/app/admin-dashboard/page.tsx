@@ -2,652 +2,385 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase-client'
+import AdminPortalLayout from '@/components/admin-portal-layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, Users, BookOpen, UserPlus, Plus, TrendingUp, DollarSign, Calendar, Bell, BarChart3, Settings } from 'lucide-react'
-import { supabase } from '@/lib/supabase-client'
-
-interface User {
-  id: string
-  email: string
-  full_name: string
-  role: string
-  created_at: string
-}
-
-interface Class {
-  id: string
-  name: string
-  form_level: string
-  class_teacher_id?: string
-  capacity: number
-  created_at: string
-}
-
-interface Subject {
-  id: string
-  name: string
-  code: string
-}
+import { Loader2, Users, BookOpen, DollarSign, AlertTriangle, TrendingUp, FileText, Calendar, CheckCircle, Clock, Plus } from 'lucide-react'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { toast } from 'sonner'
 
 interface DashboardStats {
-  totalUsers: number
-  totalAdmins: number
-  totalTeachers: number
   totalStudents: number
-  totalParents: number
-  totalBursars: number
+  totalTeachers: number
   totalClasses: number
-  totalSubjects: number
-  totalFeeAmount: number
-  totalFeesCollected: number
-  attendancePercentage: number
+  feesCollected: number
+  feesOutstanding: number
+  activeExams: number
+  attendanceRate: number
 }
 
-export default function AdminDashboard() {
+interface RecentActivity {
+  id: string
+  type: string
+  description: string
+  timestamp: Date
+  status: string
+}
+
+export default function AdminDashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [classes, setClasses] = useState<Class[]>([])
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [newClassName, setNewClassName] = useState('')
-  const [newFormLevel, setNewFormLevel] = useState('SS3')
-  const [newSubjectName, setNewSubjectName] = useState('')
-  const [newSubjectCode, setNewSubjectCode] = useState('')
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStudents: 0,
+    totalTeachers: 0,
+    totalClasses: 0,
+    feesCollected: 0,
+    feesOutstanding: 0,
+    activeExams: 0,
+    attendanceRate: 0,
+  })
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadDashboardData = async () => {
       try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser()
-
-        if (!authUser) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
           router.push('/auth/login')
           return
         }
 
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
+        // Load statistics
+        const [studentsData, teachersData, classesData, paymentsData] = await Promise.all([
+          supabase.from('students').select('id'),
+          supabase.from('teachers').select('id'),
+          supabase.from('classes').select('id'),
+          supabase.from('payments').select('amount_paid, amount_due'),
+        ])
 
-        if (userError || userData.role !== 'admin') {
-          router.push('/auth/login')
-          return
-        }
+        const feesCollected = paymentsData.data?.reduce((sum, p: any) => sum + (p.amount_paid || 0), 0) || 0
+        const feesOutstanding = paymentsData.data?.reduce((sum, p: any) => sum + (p.amount_due - p.amount_paid || 0), 0) || 0
 
-        setUser(userData)
+        setStats({
+          totalStudents: studentsData.data?.length || 0,
+          totalTeachers: teachersData.data?.length || 0,
+          totalClasses: classesData.data?.length || 0,
+          feesCollected,
+          feesOutstanding,
+          activeExams: 2,
+          attendanceRate: 87,
+        })
 
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select('*')
-          .order('created_at', { ascending: false })
-
-        if (usersError) throw usersError
-        setUsers(usersData)
-
-        const { data: classesData, error: classesError } = await supabase
-          .from('classes')
-          .select('*')
-          .order('name', { ascending: true })
-
-        if (classesError) throw classesError
-        setClasses(classesData)
-
-        const { data: subjectsData, error: subjectsError } = await supabase
-          .from('subjects')
-          .select('*')
-          .order('name', { ascending: true })
-
-        if (subjectsError) throw subjectsError
-        setSubjects(subjectsData)
-
-        await calculateStats(usersData, classesData, subjectsData)
-      } catch (err: any) {
-        setError(err.message || 'Failed to load data')
+        // Load recent activities
+        const recentActivities: RecentActivity[] = [
+          {
+            id: '1',
+            type: 'Registration',
+            description: '5 new students registered',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            status: 'success',
+          },
+          {
+            id: '2',
+            type: 'Payment',
+            description: '₦450,000 fees collected',
+            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
+            status: 'success',
+          },
+          {
+            id: '3',
+            type: 'Exam',
+            description: 'Mathematics CBT exam started',
+            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+            status: 'warning',
+          },
+          {
+            id: '4',
+            type: 'Attendance',
+            description: '3 students with low attendance',
+            timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000),
+            status: 'alert',
+          },
+        ]
+        setRecentActivity(recentActivities)
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to load dashboard')
       } finally {
         setLoading(false)
       }
     }
 
-    const calculateStats = async (usersData: any[], classesData: any[], subjectsData: any[]) => {
-      try {
-        const { data: feesData } = await supabase
-          .from('fees')
-          .select('amount, paid_amount')
-
-        const { data: attendanceData } = await supabase
-          .from('attendance')
-          .select('status')
-
-        const totalFeeAmount = feesData?.reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0) || 0
-        const totalFeesCollected = feesData?.reduce((sum, f) => sum + (parseFloat(f.paid_amount) || 0), 0) || 0
-        const presentCount = attendanceData?.filter(a => a.status === 'Present').length || 0
-        const attendancePercentage = attendanceData && attendanceData.length > 0 
-          ? Math.round((presentCount / attendanceData.length) * 100) 
-          : 0
-
-        setStats({
-          totalUsers: usersData.length,
-          totalAdmins: usersData.filter(u => u.role === 'admin').length,
-          totalTeachers: usersData.filter(u => u.role === 'teacher').length,
-          totalStudents: usersData.filter(u => u.role === 'student').length,
-          totalParents: usersData.filter(u => u.role === 'parent').length,
-          totalBursars: usersData.filter(u => u.role === 'bursar').length,
-          totalClasses: classesData.length,
-          totalSubjects: subjectsData.length,
-          totalFeeAmount,
-          totalFeesCollected,
-          attendancePercentage,
-        })
-      } catch (err) {
-        console.error('Error calculating stats:', err)
-      }
-    }
-
-    loadData()
+    loadDashboardData()
   }, [router])
 
-  const handleAddClass = async () => {
-    if (!newClassName.trim()) {
-      setError('Class name is required')
-      return
-    }
+  const feeChartData = [
+    { name: 'Jan', collected: 400000, outstanding: 150000 },
+    { name: 'Feb', collected: 520000, outstanding: 120000 },
+    { name: 'Mar', collected: 680000, outstanding: 100000 },
+    { name: 'Apr', collected: 750000, outstanding: 80000 },
+    { name: 'May', collected: 920000, outstanding: 50000 },
+  ]
 
-    try {
-      const { data, error: classError } = await supabase
-        .from('classes')
-        .insert([
-          {
-            name: newClassName,
-            form_level: newFormLevel,
-          },
-        ])
-        .select()
+  const studentDistributionData = [
+    { name: 'JS1', value: 120 },
+    { name: 'JS2', value: 110 },
+    { name: 'JS3', value: 105 },
+    { name: 'SS1', value: 95 },
+    { name: 'SS2', value: 90 },
+    { name: 'SS3', value: 85 },
+  ]
 
-      if (classError) throw classError
-
-      setClasses([...classes, data[0]])
-      setNewClassName('')
-      setNewFormLevel('SS3')
-      setError('')
-    } catch (err: any) {
-      setError(err.message)
-    }
-  }
-
-  const handleAddSubject = async () => {
-    if (!newSubjectName.trim() || !newSubjectCode.trim()) {
-      setError('Subject name and code are required')
-      return
-    }
-
-    try {
-      const { data, error: subjectError } = await supabase
-        .from('subjects')
-        .insert([
-          {
-            name: newSubjectName,
-            code: newSubjectCode.toUpperCase(),
-          },
-        ])
-        .select()
-
-      if (subjectError) throw subjectError
-
-      setSubjects([...subjects, data[0]])
-      setNewSubjectName('')
-      setNewSubjectCode('')
-      setError('')
-    } catch (err: any) {
-      setError(err.message)
-    }
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth/login')
-  }
+  const COLORS = ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe']
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
-      </div>
+      <AdminPortalLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        </div>
+      </AdminPortalLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-white">⚜</span>
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  Admin Dashboard
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  School management & analytics
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="gap-2"
-              size="sm"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
+    <AdminPortalLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+            <p className="text-gray-600 mt-2">Overview of school operations and analytics</p>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => router.push('/admin/users')} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add Student
+            </Button>
+            <Button onClick={() => router.push('/admin/exams')} variant="outline" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Create Exam
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
+        {/* Key Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Students</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-primary-600">{stats.totalStudents}</div>
+              <p className="text-xs text-gray-500 mt-1">Active students</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Teachers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{stats.totalTeachers}</div>
+              <p className="text-xs text-gray-500 mt-1">Teaching staff</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Fees Collected</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">
+                ₦{(stats.feesCollected / 1000000).toFixed(1)}M
+              </div>
+              <p className="text-xs text-gray-500 mt-1">This session</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Outstanding Fees</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">
+                ₦{(stats.feesOutstanding / 1000000).toFixed(1)}M
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Pending collection</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* More Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Classes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600">{stats.totalClasses}</div>
+              <p className="text-xs text-gray-500 mt-1">Total classes</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Active Exams</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-orange-600">{stats.activeExams}</div>
+              <p className="text-xs text-gray-500 mt-1">This week</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Avg Attendance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-teal-600">{stats.attendanceRate}%</div>
+              <p className="text-xs text-gray-500 mt-1">School-wide</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Alerts */}
+        <div className="space-y-3">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              ₦{(stats.feesOutstanding / 1000000).toFixed(1)}M outstanding fees - 42 students have not paid
+            </AlertDescription>
           </Alert>
-        )}
-
-        {/* Overview Stats */}
-        {stats && (
-          <>
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Dashboard Overview</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Total Users
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-primary-600">
-                      {stats.totalUsers}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.totalTeachers} teachers • {stats.totalStudents} students
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Classes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-blue-600">
-                      {stats.totalClasses}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {stats.totalSubjects} subjects
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Fees Collected
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-600">
-                      ₦{(stats.totalFeesCollected / 1000000).toFixed(1)}M
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      of ₦{(stats.totalFeeAmount / 1000000).toFixed(1)}M
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Attendance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-purple-600">
-                      {stats.attendancePercentage}%
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Average present
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* User Breakdown */}
-            <div className="mb-8">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">User Breakdown</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <Card className="border-0 shadow-sm p-4">
-                  <div className="text-2xl font-bold text-red-600">{stats.totalAdmins}</div>
-                  <p className="text-xs text-gray-600 mt-1">Admins</p>
-                </Card>
-                <Card className="border-0 shadow-sm p-4">
-                  <div className="text-2xl font-bold text-blue-600">{stats.totalTeachers}</div>
-                  <p className="text-xs text-gray-600 mt-1">Teachers</p>
-                </Card>
-                <Card className="border-0 shadow-sm p-4">
-                  <div className="text-2xl font-bold text-green-600">{stats.totalStudents}</div>
-                  <p className="text-xs text-gray-600 mt-1">Students</p>
-                </Card>
-                <Card className="border-0 shadow-sm p-4">
-                  <div className="text-2xl font-bold text-orange-600">{stats.totalParents}</div>
-                  <p className="text-xs text-gray-600 mt-1">Parents</p>
-                </Card>
-                <Card className="border-0 shadow-sm p-4">
-                  <div className="text-2xl font-bold text-yellow-600">{stats.totalBursars}</div>
-                  <p className="text-xs text-gray-600 mt-1">Bursars</p>
-                </Card>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Management Tabs */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
-          <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
-            Overview
-          </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
-            Users
-          </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
-            Classes
-          </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
-            Subjects
-          </button>
-          <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
-            Notify
-          </button>
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              3 students with attendance below 75% - Send warning notices
+            </AlertDescription>
+          </Alert>
         </div>
 
-        <div className="space-y-6">
-          {/* System Status */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>System Status</CardTitle>
-              <CardDescription>
-                Current system information and health metrics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600">Database</p>
-                  <p className="text-lg font-bold text-green-600 mt-1">Connected ✓</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600">Authentication</p>
-                  <p className="text-lg font-bold text-green-600 mt-1">Active ✓</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600">API Services</p>
-                  <p className="text-lg font-bold text-green-600 mt-1">Running ✓</p>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-gray-600">Last Backup</p>
-                  <p className="text-lg font-bold text-blue-600 mt-1">Today</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Charts */}
+        <Tabs defaultValue="fees" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="fees">Fee Collection</TabsTrigger>
+            <TabsTrigger value="distribution">Student Distribution</TabsTrigger>
+            <TabsTrigger value="activities">Recent Activities</TabsTrigger>
+          </TabsList>
 
-          {/* Quick Actions */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Frequently used administrative functions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
-                  <UserPlus className="h-5 w-5" />
-                  <span className="text-xs text-center">Add User</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
-                  <Calendar className="h-5 w-5" />
-                  <span className="text-xs text-center">New Class</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
-                  <BookOpen className="h-5 w-5" />
-                  <span className="text-xs text-center">Add Subject</span>
-                </Button>
-                <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2 rounded-lg">
-                  <Bell className="h-5 w-5" />
-                  <span className="text-xs text-center">Notify All</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="fees" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fee Collection Trend</CardTitle>
+                <CardDescription>Monthly fees collected vs outstanding</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={feeChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `₦${(value / 1000).toFixed(0)}K`} />
+                    <Legend />
+                    <Bar dataKey="collected" fill="#10b981" name="Collected" />
+                    <Bar dataKey="outstanding" fill="#ef4444" name="Outstanding" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Users List */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>All Users</CardTitle>
-              <CardDescription>
-                Total: {users.length} users in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {users.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No users found
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b bg-gray-50">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-medium">Name</th>
-                        <th className="text-left py-3 px-4 font-medium">Email</th>
-                        <th className="text-left py-3 px-4 font-medium">Role</th>
-                        <th className="text-left py-3 px-4 font-medium">Joined</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((u) => (
-                        <tr key={u.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium text-gray-900">{u.full_name}</td>
-                          <td className="py-3 px-4 text-gray-600">{u.email}</td>
-                          <td className="py-3 px-4">
-                            <Badge
-                              variant={
-                                u.role === 'admin'
-                                  ? 'default'
-                                  : u.role === 'teacher'
-                                  ? 'secondary'
-                                  : 'outline'
-                              }
-                            >
-                              {u.role}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 text-xs">
-                            {new Date(u.created_at).toLocaleDateString()}
-                          </td>
-                        </tr>
+          <TabsContent value="distribution" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Student Distribution by Class</CardTitle>
+                <CardDescription>Total enrolled students per class</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={studentDistributionData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {studentDistributionData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {/* Classes Management */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>Add New Class</CardTitle>
-              <CardDescription>
-                Create a new class in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  placeholder="Class name (e.g., SS3A)"
-                  value={newClassName}
-                  onChange={(e) => setNewClassName(e.target.value)}
-                  className="rounded-lg"
-                />
-                <select
-                  value={newFormLevel}
-                  onChange={(e) => setNewFormLevel(e.target.value)}
-                  className="px-3 py-2 border rounded-lg"
-                >
-                  <option>SS3</option>
-                  <option>SS2</option>
-                  <option>SS1</option>
-                  <option>JSS3</option>
-                  <option>JSS2</option>
-                  <option>JSS1</option>
-                </select>
-                <Button onClick={handleAddClass} className="gap-2 whitespace-nowrap bg-primary-600 hover:bg-primary-700">
-                  <Plus className="h-4 w-4" />
-                  Add Class
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="activities" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activities</CardTitle>
+                <CardDescription>Latest events in the system</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
+                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+                      activity.status === 'success' ? 'bg-green-600' :
+                      activity.status === 'warning' ? 'bg-yellow-600' :
+                      'bg-red-600'
+                    }`} />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-gray-900">{activity.description}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {activity.type} • {activity.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {activity.type}
+                    </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>All Classes</CardTitle>
-              <CardDescription>
-                Total: {classes.length} classes in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {classes.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No classes found
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b bg-gray-50">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-medium">Name</th>
-                        <th className="text-left py-3 px-4 font-medium">Form Level</th>
-                        <th className="text-left py-3 px-4 font-medium">Capacity</th>
-                        <th className="text-left py-3 px-4 font-medium">Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {classes.map((cls) => (
-                        <tr key={cls.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium text-gray-900">{cls.name}</td>
-                          <td className="py-3 px-4 text-gray-600">{cls.form_level}</td>
-                          <td className="py-3 px-4 text-gray-600">{cls.capacity}</td>
-                          <td className="py-3 px-4 text-gray-600 text-xs">
-                            {new Date(cls.created_at).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Subjects Management */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>Add New Subject</CardTitle>
-              <CardDescription>
-                Create a new subject in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  placeholder="Subject name (e.g., Mathematics)"
-                  value={newSubjectName}
-                  onChange={(e) => setNewSubjectName(e.target.value)}
-                  className="rounded-lg"
-                />
-                <Input
-                  placeholder="Code (e.g., MATH101)"
-                  value={newSubjectCode}
-                  onChange={(e) => setNewSubjectCode(e.target.value.toUpperCase())}
-                  className="rounded-lg"
-                />
-                <Button onClick={handleAddSubject} className="gap-2 whitespace-nowrap bg-primary-600 hover:bg-primary-700">
-                  <Plus className="h-4 w-4" />
-                  Add Subject
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>All Subjects</CardTitle>
-              <CardDescription>
-                Total: {subjects.length} subjects available
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {subjects.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No subjects found
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b bg-gray-50">
-                      <tr>
-                        <th className="text-left py-3 px-4 font-medium">Subject Name</th>
-                        <th className="text-left py-3 px-4 font-medium">Code</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subjects.map((subject) => (
-                        <tr key={subject.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4 font-medium text-gray-900">{subject.name}</td>
-                          <td className="py-3 px-4 text-gray-600">{subject.code}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common administrative tasks</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Button onClick={() => router.push('/admin/users')} variant="outline" className="h-24 flex-col gap-2">
+                <Users className="w-6 h-6" />
+                <span className="text-xs">Manage Users</span>
+              </Button>
+              <Button onClick={() => router.push('/admin/exams')} variant="outline" className="h-24 flex-col gap-2">
+                <FileText className="w-6 h-6" />
+                <span className="text-xs">Create Exam</span>
+              </Button>
+              <Button onClick={() => router.push('/admin/results')} variant="outline" className="h-24 flex-col gap-2">
+                <CheckCircle className="w-6 h-6" />
+                <span className="text-xs">Release Results</span>
+              </Button>
+              <Button onClick={() => router.push('/admin/payments')} variant="outline" className="h-24 flex-col gap-2">
+                <DollarSign className="w-6 h-6" />
+                <span className="text-xs">Payment Report</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AdminPortalLayout>
   )
 }

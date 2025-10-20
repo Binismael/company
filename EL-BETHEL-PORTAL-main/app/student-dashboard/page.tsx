@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock } from 'lucide-react'
+import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock, Bell, Megaphone } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
+import StudentPortalLayout from '@/components/student-portal-layout'
 
 interface Student {
   id: string
@@ -172,9 +173,10 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <StudentPortalLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -201,10 +203,10 @@ export default function StudentDashboard() {
             </Button>
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content */}
+        <div>
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>{error}</AlertDescription>
@@ -357,16 +359,28 @@ export default function StudentDashboard() {
         {/* Navigation Tabs */}
         <Tabs defaultValue="exam" className="w-full mb-8">
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/results')}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+            >
               Academics
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/exams')}
+              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap hover:bg-gray-800 transition-colors"
+            >
               Exam
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/payments')}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+            >
               Payments
             </button>
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
+            <button
+              onClick={() => router.push('/student/assignments')}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+            >
               Assignments
             </button>
           </div>
@@ -466,5 +480,6 @@ export default function StudentDashboard() {
         </Tabs>
       </div>
     </div>
+    </StudentPortalLayout>
   )
 }
