@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
-import { CreditCard, Upload, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { CreditCard, Upload, AlertCircle, CheckCircle, Clock, Download, TrendingDown } from 'lucide-react'
 import { toast } from 'sonner'
+import StudentPortalLayout from '@/components/student-portal-layout'
 
 interface PaymentRecord {
   id: string
