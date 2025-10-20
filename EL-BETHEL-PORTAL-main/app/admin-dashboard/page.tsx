@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   BarChart,
   Bar,
@@ -18,6 +20,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  AreaChart,
+  Area,
+  ScatterChart,
+  Scatter,
 } from 'recharts'
 import {
   Users,
@@ -29,6 +35,13 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Target,
+  Zap,
+  Eye,
+  Download,
+  RefreshCw,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
