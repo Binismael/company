@@ -142,8 +142,17 @@ export default function UserManagementPage() {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesRole = selectedRole === 'all' || user.role === selectedRole
-    return matchesSearch && matchesRole
+    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus
+    return matchesSearch && matchesRole && matchesStatus
   })
+
+  const userStats = {
+    total: users.length,
+    students: users.filter(u => u.role === 'student').length,
+    teachers: users.filter(u => u.role === 'teacher').length,
+    active: users.filter(u => u.status === 'active').length,
+    suspended: users.filter(u => u.status === 'suspended').length,
+  }
 
   if (loading) {
     return (
