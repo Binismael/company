@@ -10,7 +10,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Plus, Search, Edit2, Trash2, Eye, EyeOff, Download, Upload, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Loader2, Plus, Search, Edit2, Trash2, Eye, EyeOff, Download, Upload, Lock, CheckCircle, AlertCircle, MoreVertical } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface User {
@@ -20,6 +29,8 @@ interface User {
   role: string
   status: string
   created_at: string
+  last_login?: string
+  phone?: string
 }
 
 export default function UserManagementPage() {
