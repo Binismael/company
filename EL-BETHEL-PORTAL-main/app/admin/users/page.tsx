@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Loader2, Plus, Search, Edit2, Trash2, Eye, EyeOff, Download, Upload, Lock, CheckCircle, AlertCircle, MoreVertical } from 'lucide-react'
+import { Loader2, Plus, Search, Edit2, Trash2, Eye, EyeOff, Download, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface User {
