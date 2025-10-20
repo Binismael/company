@@ -75,9 +75,16 @@ export default function StudentDashboard() {
             user:users(full_name, email)
           `)
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
         if (studentError) throw studentError
+
+        if (!studentData) {
+          setStudent(null)
+          setError('No student profile found for this account. Please register or ask an admin to assign you to a class.')
+          return
+        }
+
         setStudent(studentData)
 
         const { data: resultsData, error: resultsError } = await supabase
@@ -90,7 +97,7 @@ export default function StudentDashboard() {
           .order('created_at', { ascending: false })
 
         if (resultsError) throw resultsError
-        setResults(resultsData)
+        setResults(resultsData || [])
 
         const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendance')
@@ -103,7 +110,7 @@ export default function StudentDashboard() {
           .limit(30)
 
         if (attendanceError) throw attendanceError
-        setAttendance(attendanceData)
+        setAttendance(attendanceData || [])
 
         const { data: assignmentsData, error: assignmentsError } = await supabase
           .from('assignments')
@@ -116,7 +123,7 @@ export default function StudentDashboard() {
           .limit(10)
 
         if (assignmentsError) throw assignmentsError
-        setAssignments(assignmentsData)
+        setAssignments(assignmentsData || [])
       } catch (err: any) {
         setError(err.message || 'Failed to load data')
       } finally {
