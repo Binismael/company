@@ -289,6 +289,24 @@ export default function StudentDashboard() {
           </Card>
         </div>
 
+        {/* Quick Links */}
+        <Card className="border-0 shadow-sm mb-8">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-900">Quick Links</CardTitle>
+            <CardDescription>Jump to the most used pages</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+              <a href="/results" className="px-3 py-2 text-sm border rounded-lg text-center hover:bg-gray-50">Results</a>
+              <a href="/attendance" className="px-3 py-2 text-sm border rounded-lg text-center hover:bg-gray-50">Attendance</a>
+              <a href="/exams" className="px-3 py-2 text-sm border rounded-lg text-center hover:bg-gray-50">Exams</a>
+              <a href="/assignments" className="px-3 py-2 text-sm border rounded-lg text-center hover:bg-gray-50">Assignments</a>
+              <a href="/fees" className="px-3 py-2 text-sm border rounded-lg text-center hover:bg-gray-50">Fees</a>
+              <a href="/messages" className="px-3 py-2 text-sm border rounded-lg text-center hover:bg-gray-50">Messages</a>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* AI Learning Assistant Section */}
         <Card className="border-0 shadow-sm mb-8 bg-gradient-to-r from-blue-50 to-indigo-50">
           <CardHeader>
