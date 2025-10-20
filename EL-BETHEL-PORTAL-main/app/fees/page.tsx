@@ -60,10 +60,16 @@ export default function FeesPage() {
 
         <Card className="border-0 shadow-sm mb-6">
           <CardHeader><CardTitle>Overview</CardTitle><CardDescription>Current session totals</CardDescription></CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg border"><div className="text-xs text-gray-600 mb-1">Total Fees</div><div className="text-2xl font-bold">₦{totals.total.toLocaleString()}</div></div>
-            <div className="p-4 rounded-lg border"><div className="text-xs text-gray-600 mb-1">Paid</div><div className="text-2xl font-bold text-green-600">₦{totals.paid.toLocaleString()}</div></div>
-            <div className="p-4 rounded-lg border"><div className="text-xs text-gray-600 mb-1">Balance</div><div className="text-2xl font-bold text-red-600">₦{totals.balance.toLocaleString()}</div></div>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+              <div className="p-4 rounded-lg border"><div className="text-xs text-gray-600 mb-1">Total Fees</div><div className="text-2xl font-bold">₦{totals.total.toLocaleString()}</div></div>
+              <div className="p-4 rounded-lg border"><div className="text-xs text-gray-600 mb-1">Paid</div><div className="text-2xl font-bold text-green-600">₦{totals.paid.toLocaleString()}</div></div>
+              <div className="p-4 rounded-lg border"><div className="text-xs text-gray-600 mb-1">Balance</div><div className="text-2xl font-bold text-red-600">₦{totals.balance.toLocaleString()}</div></div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a href="/payments" className="px-3 py-2 border rounded-md hover:bg-gray-50">Pay Now</a>
+              <a href="/payments" className="px-3 py-2 border rounded-md hover:bg-gray-50">Upload Proof</a>
+            </div>
           </CardContent>
         </Card>
 
