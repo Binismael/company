@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock } from 'lucide-react'
+import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock, Bell, Megaphone } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
+import StudentPortalLayout from '@/components/student-portal-layout'
 
 interface Student {
   id: string
