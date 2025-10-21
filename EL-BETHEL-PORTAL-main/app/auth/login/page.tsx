@@ -184,9 +184,11 @@ export default function LoginPage() {
         <Card className="shadow-xl border-0 rounded-2xl">
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-                <span className="text-xl font-bold text-white">⚜</span>
-              </div>
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
+                alt="El Bethel Academy Logo"
+                className="h-12 w-12"
+              />
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>
