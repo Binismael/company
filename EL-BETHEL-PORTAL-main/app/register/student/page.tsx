@@ -603,7 +603,16 @@ export default function StudentRegistration() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Student Registration</h1>
+          <div className="flex justify-center mb-4">
+            <img
+              src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
+              alt="El Bethel Academy Logo"
+              className="h-16 w-16"
+            />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-1">El Bethel Academy</h1>
+          <p className="text-sm text-gray-500 mb-2">Minna</p>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Student Registration</h2>
           <p className="text-gray-600">Create your account and register to access the school portal</p>
         </div>
 
