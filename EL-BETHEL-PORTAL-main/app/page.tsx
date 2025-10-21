@@ -63,11 +63,18 @@ export default function LandingPage() {
       <nav className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Brain className="h-8 w-8 text-primary-600" />
-              <h1 className="text-2xl font-bold text-primary-700">
-                El Bethel Academy
-              </h1>
+            <div className="flex items-center gap-3">
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
+                alt="El Bethel Academy Logo"
+                className="h-10 w-10"
+              />
+              <div>
+                <h1 className="text-xl font-bold text-primary-700">
+                  El Bethel Academy
+                </h1>
+                <p className="text-xs text-gray-500">Minna</p>
+              </div>
             </div>
             <div className="flex gap-4">
               <Link href="/auth/login">
