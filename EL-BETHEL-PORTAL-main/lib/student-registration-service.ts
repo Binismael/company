@@ -251,19 +251,8 @@ export async function checkEmailExists(email: string): Promise<boolean> {
 export async function getPendingStudents() {
   try {
     const { data, error } = await supabase
-      .from('students')
-      .select(`
-        id,
-        admission_number,
-        first_name,
-        last_name,
-        email,
-        gender,
-        date_of_birth,
-        created_at,
-        users!inner(email)
-      `)
-      .eq('approved', false)
+      .from('pending_student_registrations')
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -279,61 +268,134 @@ export async function getPendingStudents() {
 }
 
 /**
- * Approve student registration (admin only)
+ * Get student details with documents (for admin review)
  */
-export async function approveStudent(studentId: string): Promise<boolean> {
+export async function getStudentWithDocuments(studentId: string) {
   try {
-    const { error } = await supabase
-      .from('students')
-      .update({ approved: true })
-      .eq('id', studentId)
+    const [studentRes, docsRes, approvalRes] = await Promise.all([
+      supabase
+        .from('students')
+        .select('*')
+        .eq('id', studentId)
+        .single(),
+      supabase
+        .from('student_documents')
+        .select('*')
+        .eq('student_id', studentId),
+      supabase
+        .from('student_approvals')
+        .select('*')
+        .eq('student_id', studentId)
+        .single(),
+    ])
 
-    if (error) {
-      console.error('Error approving student:', error)
-      return false
+    if (studentRes.error) throw studentRes.error
+
+    return {
+      student: studentRes.data,
+      documents: docsRes.data || [],
+      approval: approvalRes.data,
     }
-
-    return true
   } catch (error) {
-    console.error('Error approving student:', error)
-    return false
+    console.error('Error fetching student details:', error)
+    return null
   }
 }
 
 /**
- * Reject student registration (admin only)
+ * Approve student registration with admin comment (admin only)
  */
-export async function rejectStudent(studentId: string, reason?: string): Promise<boolean> {
+export async function approveStudent(
+  studentId: string,
+  adminId: string,
+  comments?: string
+): Promise<{ success: boolean; error?: string }> {
   try {
-    // First get student's user_id
-    const { data: student, error: fetchError } = await supabase
-      .from('students')
-      .select('user_id')
-      .eq('id', studentId)
-      .single()
+    // Use RPC function for approval
+    const { data, error } = await supabase.rpc('approve_student_registration', {
+      p_student_id: studentId,
+      p_admin_id: adminId,
+      p_comments: comments || null,
+    })
 
-    if (fetchError || !student?.user_id) {
-      console.error('Error fetching student:', fetchError)
-      return false
+    if (error) {
+      throw new Error(error.message)
     }
 
-    // Delete student record
-    const { error: deleteError } = await supabase
-      .from('students')
-      .delete()
-      .eq('id', studentId)
+    return { success: data === true }
+  } catch (error) {
+    console.error('Error approving student:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to approve student',
+    }
+  }
+}
 
-    if (deleteError) {
-      console.error('Error deleting student record:', deleteError)
-      return false
+/**
+ * Reject student registration with reason (admin only)
+ */
+export async function rejectStudent(
+  studentId: string,
+  adminId: string,
+  reason: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Use RPC function for rejection
+    const { data, error } = await supabase.rpc('reject_student_registration', {
+      p_student_id: studentId,
+      p_admin_id: adminId,
+      p_reason: reason,
+    })
+
+    if (error) {
+      throw new Error(error.message)
     }
 
-    // Delete associated user (optional - depends on policy)
-    // await supabase.auth.admin.deleteUser(student.user_id)
-
-    return true
+    return { success: data === true }
   } catch (error) {
     console.error('Error rejecting student:', error)
-    return false
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to reject student',
+    }
+  }
+}
+
+/**
+ * Get student registration statistics (for admin dashboard)
+ */
+export async function getStudentRegistrationStats() {
+  try {
+    const [totalRes, approvedRes, pendingRes, rejectedRes] = await Promise.all([
+      supabase.from('students').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('approved', true),
+      supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('approved', false),
+      supabase
+        .from('student_approvals')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'rejected'),
+    ])
+
+    return {
+      total: totalRes.count || 0,
+      approved: approvedRes.count || 0,
+      pending: pendingRes.count || 0,
+      rejected: rejectedRes.count || 0,
+    }
+  } catch (error) {
+    console.error('Error fetching registration stats:', error)
+    return {
+      total: 0,
+      approved: 0,
+      pending: 0,
+      rejected: 0,
+    }
   }
 }
