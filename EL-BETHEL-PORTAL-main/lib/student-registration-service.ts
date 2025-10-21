@@ -78,7 +78,7 @@ export async function uploadStudentDocuments(
 }
 
 /**
- * Create student user and registration record
+ * Create student user and registration record with auto-generated admission number
  */
 export async function registerStudent(
   formData: StudentRegistrationFormData,
@@ -117,11 +117,12 @@ export async function registerStudent(
         email: formData.email.toLowerCase(),
         full_name: `${formData.firstName} ${formData.lastName}`,
         role: 'student',
+        password_hash: '', // Will be managed by Supabase Auth
       },
     ])
 
-    if (userError) {
-      // Clean up auth user if user table insert fails
+    if (userError && !userError.message.includes('duplicate')) {
+      // Clean up auth user if user table insert fails (ignore duplicate key errors)
       await supabase.auth.admin.deleteUser(userId)
       throw new Error(`User record creation failed: ${userError.message}`)
     }
@@ -132,7 +133,7 @@ export async function registerStudent(
       uploadedFiles = await uploadStudentDocuments(userId, files)
     }
 
-    // 4. Insert student record
+    // 4. Insert student record with auto-generated admission number via trigger
     const { data: studentData, error: studentError } = await supabase
       .from('students')
       .insert([
@@ -164,12 +165,31 @@ export async function registerStudent(
       throw new Error(`Student record creation failed: ${studentError.message}`)
     }
 
+    const student = studentData?.[0]
+    const admissionNumber = student?.admission_number
+
+    // 5. Create approval record for tracking
+    const { error: approvalError } = await supabase
+      .from('student_approvals')
+      .insert([
+        {
+          student_id: student?.id,
+          status: 'pending',
+          comments: 'Awaiting admin review and approval',
+        },
+      ])
+
+    if (approvalError) {
+      console.warn('Failed to create approval record:', approvalError)
+      // Don't fail the entire registration for this
+    }
+
     return {
       success: true,
       userId,
-      studentId: studentData?.[0]?.id,
-      admissionNumber: studentData?.[0]?.admission_number,
-      message: 'Registration successful! Please wait for admin approval.',
+      studentId: student?.id,
+      admissionNumber,
+      message: `Registration successful! Your admission number is ${admissionNumber}. Please wait for admin approval.`,
     }
   } catch (error) {
     console.error('Registration error:', error)
