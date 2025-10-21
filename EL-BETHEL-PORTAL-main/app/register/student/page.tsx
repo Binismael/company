@@ -1,318 +1,600 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+import { useForm, SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { 
+  studentRegistrationSchema, 
+  type StudentRegistrationFormData,
+  NIGERIAN_STATES,
+  GUARDIAN_RELATIONSHIPS,
+  CLASS_OPTIONS,
+} from '@/lib/student-registration-validation'
+import { 
+  registerStudent, 
+  fetchClasses,
+  checkEmailExists,
+} from '@/lib/student-registration-service'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Upload, AlertTriangle, CheckCircle2, Loader2, Eye, EyeOff } from 'lucide-react'
+import { 
+  Upload, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Loader2, 
+  Eye, 
+  EyeOff,
+  FileUp,
+  GraduationCap,
+} from 'lucide-react'
 import Link from 'next/link'
 
-interface FormData {
-  email: string
-  password: string
-  confirmPassword: string
-  firstName: string
-  lastName: string
-  gender: string
-  dateOfBirth: string
-  phone: string
-  address: string
-  state: string
-  lga: string
-  classId: string
-  guardianName: string
-  guardianPhone: string
-  guardianEmail: string
-  guardianRelationship: string
-  previousSchool: string
-}
-
-interface FileUploads {
-  photo: File | null
-  birthCertificate: File | null
-  idProof: File | null
-}
-
-interface UploadProgress {
-  photo: number
-  birthCertificate: number
-  idProof: number
-}
-
-const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa',
-  'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti',
-  'Enugu', 'Federal Capital Territory', 'Gombe', 'Imo', 'Jigawa', 'Kaduna',
-  'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger',
-  'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba',
-  'Yobe', 'Zamfara'
+const STEPS = [
+  { id: 'account', label: 'Account', icon: '📧' },
+  { id: 'personal', label: 'Personal', icon: '👤' },
+  { id: 'contact', label: 'Contact', icon: '📍' },
+  { id: 'guardian', label: 'Guardian', icon: '👨‍👩‍👧' },
+  { id: 'academic', label: 'Academic', icon: '📚' },
+  { id: 'documents', label: 'Documents', icon: '📄' },
 ]
-
-const RELATIONSHIPS = ['Father', 'Mother', 'Guardian', 'Sister', 'Brother', 'Aunt', 'Uncle', 'Other']
 
 export default function StudentRegistration() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [currentStep, setCurrentStep] = useState('account')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([])
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
-    photo: 0,
-    birthCertificate: 0,
-    idProof: 0,
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [classes, setClasses] = useState<Array<{ id: string; name: string; form_level: string }>>([])
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    photo?: File
+    birthCertificate?: File
+    idProof?: File
+  }>({})
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting: formSubmitting },
+    watch,
+    setValue,
+    trigger,
+  } = useForm<StudentRegistrationFormData & { photo?: File; birthCertificate?: File; idProof?: File }>({
+    resolver: zodResolver(studentRegistrationSchema),
+    mode: 'onBlur',
   })
 
-  const [files, setFiles] = useState<FileUploads>({
-    photo: null,
-    birthCertificate: null,
-    idProof: null,
-  })
+  const passwordValue = watch('password')
+  const emailValue = watch('email')
 
-  const [form, setForm] = useState<FormData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    gender: '',
-    dateOfBirth: '',
-    phone: '',
-    address: '',
-    state: '',
-    lga: '',
-    classId: '',
-    guardianName: '',
-    guardianPhone: '',
-    guardianEmail: '',
-    guardianRelationship: '',
-    previousSchool: '',
-  })
-
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+  // Load classes on mount
+  useEffect(() => {
+    const loadClasses = async () => {
+      const classesData = await fetchClasses()
+      setClasses(classesData)
+    }
+    loadClasses()
   }, [])
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>, fieldName: keyof FileUploads) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: 'photo' | 'birthCertificate' | 'idProof') => {
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`${fieldName} file must be less than 5MB`)
         return
       }
-      setFiles((prev) => ({
+
+      setUploadedFiles((prev) => ({
         ...prev,
         [fieldName]: file,
       }))
       toast.success(`${fieldName} selected`)
     }
-  }, [])
-
-  const uploadFileToStorage = async (file: File, bucket: string, path: string): Promise<string | null> => {
-    try {
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(path, file, { upsert: true })
-
-      if (error) throw error
-
-      const { data: publicUrlData } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(path)
-
-      return publicUrlData?.publicUrl || null
-    } catch (error: any) {
-      console.error(`Error uploading ${path}:`, error)
-      return null
-    }
   }
 
-  const validateForm = (): boolean => {
-    if (!form.email || !form.password || !form.confirmPassword) {
-      toast.error('Please fill in all account fields')
+  const validateEmail = async () => {
+    if (!emailValue) return true
+    const exists = await checkEmailExists(emailValue)
+    if (exists) {
+      toast.error('Email already registered')
       return false
     }
-
-    if (form.password.length < 8) {
-      toast.error('Password must be at least 8 characters')
-      return false
-    }
-
-    if (form.password !== form.confirmPassword) {
-      toast.error('Passwords do not match')
-      return false
-    }
-
-    if (!form.firstName || !form.lastName) {
-      toast.error('Please fill in your full name')
-      return false
-    }
-
-    if (!form.gender || !form.dateOfBirth) {
-      toast.error('Please fill in all personal information')
-      return false
-    }
-
-    if (!form.phone || !form.address) {
-      toast.error('Please fill in your contact information')
-      return false
-    }
-
-    if (!form.guardianName || !form.guardianPhone) {
-      toast.error('Please fill in guardian information')
-      return false
-    }
-
     return true
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleStepChange = async (newStep: string) => {
+    // Validate current step before moving
+    const stepFields = getStepFields(currentStep)
+    const isValid = await trigger(stepFields as any)
 
-    if (!validateForm()) return
-
-    setLoading(true)
-
-    try {
-      // 1. Sign up user with Supabase Auth
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: {
-            first_name: form.firstName,
-            last_name: form.lastName,
-          },
-        },
-      })
-
-      if (signUpError) throw new Error(signUpError.message)
-
-      const userId = authData?.user?.id
-      if (!userId) throw new Error('Failed to create user account')
-
-      // 2. Create user record in public.users table
-      const { error: userError } = await supabase.from('users').insert([
-        {
-          id: userId,
-          email: form.email,
-          full_name: `${form.firstName} ${form.lastName}`,
-          role: 'student',
-        },
-      ])
-
-      if (userError) throw userError
-
-      // 3. Upload files if provided
-      let photoUrl = null
-      let birthCertUrl = null
-      let idProofUrl = null
-
-      setUploading(true)
-
-      if (files.photo) {
-        const photoPath = `student-documents/${userId}/passport_photo_${Date.now()}`
-        photoUrl = await uploadFileToStorage(files.photo, 'student-documents', photoPath)
-        setUploadProgress((prev) => ({ ...prev, photo: 100 }))
+    if (isValid || currentStep === 'documents') {
+      // Special validation for email
+      if (currentStep === 'account') {
+        const emailValid = await validateEmail()
+        if (!emailValid) return
       }
-
-      if (files.birthCertificate) {
-        const certPath = `student-documents/${userId}/birth_certificate_${Date.now()}`
-        birthCertUrl = await uploadFileToStorage(files.birthCertificate, 'student-documents', certPath)
-        setUploadProgress((prev) => ({ ...prev, birthCertificate: 100 }))
-      }
-
-      if (files.idProof) {
-        const idPath = `student-documents/${userId}/id_proof_${Date.now()}`
-        idProofUrl = await uploadFileToStorage(files.idProof, 'student-documents', idPath)
-        setUploadProgress((prev) => ({ ...prev, idProof: 100 }))
-      }
-
-      setUploading(false)
-
-      // 4. Insert student record
-      const { error: studentError } = await supabase.from('students').insert([
-        {
-          user_id: userId,
-          first_name: form.firstName,
-          last_name: form.lastName,
-          gender: form.gender,
-          date_of_birth: form.dateOfBirth,
-          phone: form.phone,
-          address: form.address,
-          state: form.state,
-          lga: form.lga,
-          class_id: form.classId || null,
-          guardian_name: form.guardianName,
-          guardian_phone: form.guardianPhone,
-          guardian_email: form.guardianEmail,
-          guardian_relationship: form.guardianRelationship,
-          previous_school: form.previousSchool || null,
-          photo_url: photoUrl,
-          birth_certificate_url: birthCertUrl,
-          id_proof_url: idProofUrl,
-          approved: false,
-        },
-      ])
-
-      if (studentError) throw studentError
-
-      toast.success('Registration successful! Awaiting admin approval.')
-
-      // Redirect after success
-      setTimeout(() => {
-        router.push('/auth/login?message=registration-pending')
-      }, 2000)
-    } catch (error: any) {
-      console.error('Registration error:', error)
-      toast.error(error.message || 'Registration failed. Please try again.')
-    } finally {
-      setLoading(false)
-      setUploading(false)
+      setCurrentStep(newStep)
+    } else {
+      toast.error('Please fix the errors in this section')
     }
+  }
+
+  const getStepFields = (step: string) => {
+    const fieldMap: Record<string, string[]> = {
+      account: ['email', 'password', 'confirmPassword'],
+      personal: ['firstName', 'lastName', 'gender', 'dateOfBirth'],
+      contact: ['phone', 'address', 'state', 'lga'],
+      guardian: ['guardianName', 'guardianPhone', 'guardianEmail', 'guardianRelationship'],
+      academic: ['classId', 'previousSchool'],
+    }
+    return fieldMap[step] || []
   }
 
   const renderStepIndicator = () => (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        {['account', 'personal', 'contact', 'guardian', 'academic', 'documents'].map((step, index) => (
-          <div key={step} className="flex items-center flex-1">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-colors ${
-                currentStep === step
-                  ? 'bg-blue-600 text-white'
-                  : ['account', 'personal', 'contact', 'guardian', 'academic'].indexOf(step) <
-                    ['account', 'personal', 'contact', 'guardian', 'academic'].indexOf(currentStep)
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              {['account', 'personal', 'contact', 'guardian', 'academic'].indexOf(step) <
-              ['account', 'personal', 'contact', 'guardian', 'academic'].indexOf(currentStep) ? (
-                <CheckCircle2 className="w-5 h-5" />
-              ) : (
-                index + 1
+        {STEPS.map((step, index) => {
+          const stepIndex = STEPS.findIndex((s) => s.id === step.id)
+          const currentIndex = STEPS.findIndex((s) => s.id === currentStep)
+          const isCompleted = stepIndex < currentIndex
+          const isCurrent = step.id === currentStep
+
+          return (
+            <div key={step.id} className="flex items-center flex-1">
+              <button
+                type="button"
+                onClick={() => handleStepChange(step.id)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all ${
+                  isCurrent
+                    ? 'bg-primary text-white ring-2 ring-primary ring-offset-2'
+                    : isCompleted
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-200 text-gray-600'
+                } hover:shadow-md`}
+              >
+                {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : index + 1}
+              </button>
+              {index < STEPS.length - 1 && (
+                <div
+                  className={`flex-1 h-1 mx-2 transition-colors ${
+                    isCompleted ? 'bg-green-300' : 'bg-gray-200'
+                  }`}
+                />
               )}
             </div>
-            {index < 5 && <div className="flex-1 h-1 bg-gray-200 mx-2" />}
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div className="flex justify-between text-sm">
-        <span className="text-gray-600">Step {['account', 'personal', 'contact', 'guardian', 'academic', 'documents'].indexOf(currentStep) + 1} of 6</span>
-        <span className="font-medium">{currentStep.charAt(0).toUpperCase() + currentStep.slice(1)}</span>
+        <span className="text-gray-600">
+          Step {STEPS.findIndex((s) => s.id === currentStep) + 1} of {STEPS.length}
+        </span>
+        <span className="font-medium">
+          {STEPS.find((s) => s.id === currentStep)?.label}
+        </span>
       </div>
+    </div>
+  )
+
+  const onSubmit: SubmitHandler<StudentRegistrationFormData & { photo?: File; birthCertificate?: File; idProof?: File }> = async (data) => {
+    setIsSubmitting(true)
+    try {
+      const result = await registerStudent(data, uploadedFiles)
+
+      if (result.success) {
+        toast.success(result.message)
+        setTimeout(() => {
+          router.push('/auth/login?message=registration-pending')
+        }, 2000)
+      } else {
+        toast.error(result.error || 'Registration failed')
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      toast.error('An unexpected error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const renderAccountStep = () => (
+    <div className="space-y-4 animate-fadeIn">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h2>
+
+      <div>
+        <Label htmlFor="email">Email Address *</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="student@example.com"
+          {...register('email')}
+          className={errors.email ? 'border-red-500' : ''}
+        />
+        {errors.email && (
+          <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="password">Password *</Label>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            placeholder="At least 8 characters with uppercase, lowercase, and numbers"
+            {...register('password')}
+            className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+          >
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+        {errors.password && (
+          <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="confirmPassword">Confirm Password *</Label>
+        <div className="relative">
+          <Input
+            id="confirmPassword"
+            type={showConfirmPassword ? 'text' : 'password'}
+            placeholder="Re-enter your password"
+            {...register('confirmPassword')}
+            className={errors.confirmPassword ? 'border-red-500 pr-10' : 'pr-10'}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+          >
+            {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+        {errors.confirmPassword && (
+          <p className="text-sm text-red-500 mt-1">{errors.confirmPassword.message}</p>
+        )}
+      </div>
+
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Password Requirements</AlertTitle>
+        <AlertDescription>
+          Must be at least 8 characters with uppercase, lowercase, and numbers
+        </AlertDescription>
+      </Alert>
+    </div>
+  )
+
+  const renderPersonalStep = () => (
+    <div className="space-y-4 animate-fadeIn">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="firstName">First Name *</Label>
+          <Input
+            id="firstName"
+            placeholder="John"
+            {...register('firstName')}
+            className={errors.firstName ? 'border-red-500' : ''}
+          />
+          {errors.firstName && (
+            <p className="text-sm text-red-500 mt-1">{errors.firstName.message}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="lastName">Last Name *</Label>
+          <Input
+            id="lastName"
+            placeholder="Doe"
+            {...register('lastName')}
+            className={errors.lastName ? 'border-red-500' : ''}
+          />
+          {errors.lastName && (
+            <p className="text-sm text-red-500 mt-1">{errors.lastName.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="gender">Gender *</Label>
+          <Select defaultValue="" onValueChange={(value) => setValue('gender', value as any)}>
+            <SelectTrigger className={errors.gender ? 'border-red-500' : ''}>
+              <SelectValue placeholder="Select Gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.gender && (
+            <p className="text-sm text-red-500 mt-1">{errors.gender.message}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+          <Input
+            id="dateOfBirth"
+            type="date"
+            {...register('dateOfBirth')}
+            className={errors.dateOfBirth ? 'border-red-500' : ''}
+          />
+          {errors.dateOfBirth && (
+            <p className="text-sm text-red-500 mt-1">{errors.dateOfBirth.message}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderContactStep = () => (
+    <div className="space-y-4 animate-fadeIn">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
+
+      <div>
+        <Label htmlFor="phone">Phone Number *</Label>
+        <Input
+          id="phone"
+          placeholder="+234 800 000 0000"
+          {...register('phone')}
+          className={errors.phone ? 'border-red-500' : ''}
+        />
+        {errors.phone && (
+          <p className="text-sm text-red-500 mt-1">{errors.phone.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="address">Address *</Label>
+        <Input
+          id="address"
+          placeholder="Street address and city"
+          {...register('address')}
+          className={errors.address ? 'border-red-500' : ''}
+        />
+        {errors.address && (
+          <p className="text-sm text-red-500 mt-1">{errors.address.message}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="state">State *</Label>
+          <Select defaultValue="" onValueChange={(value) => setValue('state', value as any)}>
+            <SelectTrigger className={errors.state ? 'border-red-500' : ''}>
+              <SelectValue placeholder="Select State" />
+            </SelectTrigger>
+            <SelectContent>
+              {NIGERIAN_STATES.map((state) => (
+                <SelectItem key={state} value={state}>
+                  {state}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.state && (
+            <p className="text-sm text-red-500 mt-1">{errors.state.message}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="lga">LGA *</Label>
+          <Input
+            id="lga"
+            placeholder="Local Government Area"
+            {...register('lga')}
+            className={errors.lga ? 'border-red-500' : ''}
+          />
+          {errors.lga && (
+            <p className="text-sm text-red-500 mt-1">{errors.lga.message}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderGuardianStep = () => (
+    <div className="space-y-4 animate-fadeIn">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Guardian Information</h2>
+
+      <div>
+        <Label htmlFor="guardianName">Guardian Full Name *</Label>
+        <Input
+          id="guardianName"
+          placeholder="Guardian's full name"
+          {...register('guardianName')}
+          className={errors.guardianName ? 'border-red-500' : ''}
+        />
+        {errors.guardianName && (
+          <p className="text-sm text-red-500 mt-1">{errors.guardianName.message}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="guardianPhone">Phone Number *</Label>
+          <Input
+            id="guardianPhone"
+            placeholder="+234 800 000 0000"
+            {...register('guardianPhone')}
+            className={errors.guardianPhone ? 'border-red-500' : ''}
+          />
+          {errors.guardianPhone && (
+            <p className="text-sm text-red-500 mt-1">{errors.guardianPhone.message}</p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="guardianEmail">Email Address *</Label>
+          <Input
+            id="guardianEmail"
+            type="email"
+            placeholder="guardian@example.com"
+            {...register('guardianEmail')}
+            className={errors.guardianEmail ? 'border-red-500' : ''}
+          />
+          {errors.guardianEmail && (
+            <p className="text-sm text-red-500 mt-1">{errors.guardianEmail.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="guardianRelationship">Relationship *</Label>
+        <Select defaultValue="" onValueChange={(value) => setValue('guardianRelationship', value as any)}>
+          <SelectTrigger className={errors.guardianRelationship ? 'border-red-500' : ''}>
+            <SelectValue placeholder="Select Relationship" />
+          </SelectTrigger>
+          <SelectContent>
+            {GUARDIAN_RELATIONSHIPS.map((rel) => (
+              <SelectItem key={rel} value={rel}>
+                {rel}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.guardianRelationship && (
+          <p className="text-sm text-red-500 mt-1">{errors.guardianRelationship.message}</p>
+        )}
+      </div>
+    </div>
+  )
+
+  const renderAcademicStep = () => (
+    <div className="space-y-4 animate-fadeIn">
+      <div className="flex items-center gap-2 mb-4">
+        <GraduationCap className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-semibold text-gray-900">Academic Information</h2>
+      </div>
+
+      <div>
+        <Label htmlFor="classId">Class (Optional)</Label>
+        <Select defaultValue="" onValueChange={(value) => setValue('classId', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select Class" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None - To be assigned</SelectItem>
+            {classes.map((cls) => (
+              <SelectItem key={cls.id} value={cls.id}>
+                {cls.name} ({cls.form_level})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="previousSchool">Previous School (Optional)</Label>
+        <Input
+          id="previousSchool"
+          placeholder="Name of previous school"
+          {...register('previousSchool')}
+        />
+      </div>
+
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Admission Number</AlertTitle>
+        <AlertDescription>
+          Your admission number will be automatically generated and assigned upon admin approval
+        </AlertDescription>
+      </Alert>
+    </div>
+  )
+
+  const renderDocumentsStep = () => (
+    <div className="space-y-4 animate-fadeIn">
+      <div className="flex items-center gap-2 mb-4">
+        <FileUp className="w-5 h-5 text-primary" />
+        <h2 className="text-lg font-semibold text-gray-900">Document Upload</h2>
+      </div>
+      <p className="text-sm text-gray-600 mb-4">Upload supporting documents (optional but recommended)</p>
+
+      {/* Passport Photo */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => handleFileChange(e, 'photo')}
+          className="hidden"
+          id="photo-upload"
+        />
+        <label htmlFor="photo-upload" className="cursor-pointer block">
+          <div className="flex flex-col items-center">
+            <Upload className="w-8 h-8 text-primary mb-2" />
+            <p className="text-sm font-medium text-gray-900">
+              {uploadedFiles.photo ? uploadedFiles.photo.name : 'Upload Passport Photo'}
+            </p>
+            <p className="text-xs text-gray-500">PNG, JPG, WebP up to 5MB</p>
+          </div>
+        </label>
+      </div>
+
+      {/* Birth Certificate */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
+        <input
+          type="file"
+          accept="image/*,application/pdf"
+          onChange={(e) => handleFileChange(e, 'birthCertificate')}
+          className="hidden"
+          id="birth-cert-upload"
+        />
+        <label htmlFor="birth-cert-upload" className="cursor-pointer block">
+          <div className="flex flex-col items-center">
+            <Upload className="w-8 h-8 text-primary mb-2" />
+            <p className="text-sm font-medium text-gray-900">
+              {uploadedFiles.birthCertificate ? uploadedFiles.birthCertificate.name : 'Upload Birth Certificate'}
+            </p>
+            <p className="text-xs text-gray-500">PDF, PNG, JPG up to 5MB (Optional)</p>
+          </div>
+        </label>
+      </div>
+
+      {/* ID Proof */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer">
+        <input
+          type="file"
+          accept="image/*,application/pdf"
+          onChange={(e) => handleFileChange(e, 'idProof')}
+          className="hidden"
+          id="id-proof-upload"
+        />
+        <label htmlFor="id-proof-upload" className="cursor-pointer block">
+          <div className="flex flex-col items-center">
+            <Upload className="w-8 h-8 text-primary mb-2" />
+            <p className="text-sm font-medium text-gray-900">
+              {uploadedFiles.idProof ? uploadedFiles.idProof.name : 'Upload ID Proof'}
+            </p>
+            <p className="text-xs text-gray-500">PDF, PNG, JPG up to 5MB (Optional)</p>
+          </div>
+        </label>
+      </div>
+
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Document Upload</AlertTitle>
+        <AlertDescription>
+          All document uploads are optional. However, providing them helps speed up the approval process
+        </AlertDescription>
+      </Alert>
     </div>
   )
 
@@ -322,375 +604,27 @@ export default function StudentRegistration() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Student Registration</h1>
-          <p className="text-gray-600">Complete your registration to access the school portal</p>
+          <p className="text-gray-600">Create your account and register to access the school portal</p>
         </div>
 
         <Card className="shadow-xl border-0">
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+          <CardHeader className="bg-gradient-to-r from-primary to-secondary text-white rounded-t-lg">
             <CardTitle className="text-white">Registration Form</CardTitle>
-            <CardDescription className="text-blue-100">Fill out all sections to complete your registration</CardDescription>
+            <CardDescription className="text-blue-100">
+              Complete all sections to register. Fields marked with * are required
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="pt-8">
             {renderStepIndicator()}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Account Information */}
-              {currentStep === 'account' && (
-                <div className="space-y-4 animate-fadeIn">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h2>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                    <Input
-                      type="email"
-                      name="email"
-                      placeholder="student@example.com"
-                      value={form.email}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? 'text' : 'password'}
-                        name="password"
-                        placeholder="At least 8 characters"
-                        value={form.password}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-gray-500"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                    <div className="relative">
-                      <Input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        name="confirmPassword"
-                        placeholder="Re-enter password"
-                        value={form.confirmPassword}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-3 text-gray-500"
-                      >
-                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>Password must be at least 8 characters long</AlertDescription>
-                  </Alert>
-                </div>
-              )}
-
-              {/* Personal Information */}
-              {currentStep === 'personal' && (
-                <div className="space-y-4 animate-fadeIn">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                      <Input
-                        type="text"
-                        name="firstName"
-                        placeholder="John"
-                        value={form.firstName}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                      <Input
-                        type="text"
-                        name="lastName"
-                        placeholder="Doe"
-                        value={form.lastName}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                      <select
-                        name="gender"
-                        value={form.gender}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                      <Input
-                        type="date"
-                        name="dateOfBirth"
-                        value={form.dateOfBirth}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Contact Information */}
-              {currentStep === 'contact' && (
-                <div className="space-y-4 animate-fadeIn">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                    <Input
-                      type="tel"
-                      name="phone"
-                      placeholder="+234 800 000 0000"
-                      value={form.phone}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                    <Input
-                      type="text"
-                      name="address"
-                      placeholder="Street address and city"
-                      value={form.address}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                      <select
-                        name="state"
-                        value={form.state}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
-                      >
-                        <option value="">Select State</option>
-                        {NIGERIAN_STATES.map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">LGA</label>
-                      <Input
-                        type="text"
-                        name="lga"
-                        placeholder="Local Government Area"
-                        value={form.lga}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Guardian Information */}
-              {currentStep === 'guardian' && (
-                <div className="space-y-4 animate-fadeIn">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Guardian Information</h2>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Guardian Full Name</label>
-                    <Input
-                      type="text"
-                      name="guardianName"
-                      placeholder="Guardian's full name"
-                      value={form.guardianName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                      <Input
-                        type="tel"
-                        name="guardianPhone"
-                        placeholder="+234 800 000 0000"
-                        value={form.guardianPhone}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                      <Input
-                        type="email"
-                        name="guardianEmail"
-                        placeholder="guardian@example.com"
-                        value={form.guardianEmail}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
-                    <select
-                      name="guardianRelationship"
-                      value={form.guardianRelationship}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
-                    >
-                      <option value="">Select Relationship</option>
-                      {RELATIONSHIPS.map((rel) => (
-                        <option key={rel} value={rel}>
-                          {rel}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Academic Information */}
-              {currentStep === 'academic' && (
-                <div className="space-y-4 animate-fadeIn">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Academic Information</h2>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Class (Optional)</label>
-                    <select
-                      name="classId"
-                      value={form.classId}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500"
-                    >
-                      <option value="">Select Class</option>
-                      <option value="">JSS 1A</option>
-                      <option value="">JSS 1B</option>
-                      <option value="">SSS 1A</option>
-                      <option value="">SSS 2A</option>
-                      <option value="">SSS 3A</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Previous School (Optional)</label>
-                    <Input
-                      type="text"
-                      name="previousSchool"
-                      placeholder="Name of previous school"
-                      value={form.previousSchool}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>Admission number will be auto-generated upon approval</AlertDescription>
-                  </Alert>
-                </div>
-              )}
-
-              {/* Document Upload */}
-              {currentStep === 'documents' && (
-                <div className="space-y-4 animate-fadeIn">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Upload</h2>
-                  <p className="text-sm text-gray-600 mb-4">Upload supporting documents (optional but recommended)</p>
-
-                  {/* Passport Photo */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange(e, 'photo')}
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <label htmlFor="photo-upload" className="cursor-pointer block">
-                      <div className="flex flex-col items-center">
-                        <Upload className="w-8 h-8 text-blue-600 mb-2" />
-                        <p className="text-sm font-medium text-gray-900">
-                          {files.photo ? files.photo.name : 'Upload Passport Photo'}
-                        </p>
-                        <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
-                      </div>
-                    </label>
-                  </div>
-
-                  {/* Birth Certificate */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) => handleFileChange(e, 'birthCertificate')}
-                      className="hidden"
-                      id="birth-cert-upload"
-                    />
-                    <label htmlFor="birth-cert-upload" className="cursor-pointer block">
-                      <div className="flex flex-col items-center">
-                        <Upload className="w-8 h-8 text-blue-600 mb-2" />
-                        <p className="text-sm font-medium text-gray-900">
-                          {files.birthCertificate ? files.birthCertificate.name : 'Upload Birth Certificate'}
-                        </p>
-                        <p className="text-xs text-gray-500">PDF, PNG, JPG up to 5MB</p>
-                      </div>
-                    </label>
-                  </div>
-
-                  {/* ID Proof */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) => handleFileChange(e, 'idProof')}
-                      className="hidden"
-                      id="id-proof-upload"
-                    />
-                    <label htmlFor="id-proof-upload" className="cursor-pointer block">
-                      <div className="flex flex-col items-center">
-                        <Upload className="w-8 h-8 text-blue-600 mb-2" />
-                        <p className="text-sm font-medium text-gray-900">
-                          {files.idProof ? files.idProof.name : 'Upload ID Proof (Optional)'}
-                        </p>
-                        <p className="text-xs text-gray-500">PDF, PNG, JPG up to 5MB</p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              )}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {currentStep === 'account' && renderAccountStep()}
+              {currentStep === 'personal' && renderPersonalStep()}
+              {currentStep === 'contact' && renderContactStep()}
+              {currentStep === 'guardian' && renderGuardianStep()}
+              {currentStep === 'academic' && renderAcademicStep()}
+              {currentStep === 'documents' && renderDocumentsStep()}
 
               {/* Navigation Buttons */}
               <div className="flex justify-between gap-4 pt-8">
@@ -698,9 +632,10 @@ export default function StudentRegistration() {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    const steps = ['account', 'personal', 'contact', 'guardian', 'academic', 'documents']
-                    const currentIndex = steps.indexOf(currentStep)
-                    if (currentIndex > 0) setCurrentStep(steps[currentIndex - 1])
+                    const currentIndex = STEPS.findIndex((s) => s.id === currentStep)
+                    if (currentIndex > 0) {
+                      setCurrentStep(STEPS[currentIndex - 1].id)
+                    }
                   }}
                   disabled={currentStep === 'account'}
                 >
@@ -710,13 +645,14 @@ export default function StudentRegistration() {
                 {currentStep === 'documents' ? (
                   <Button
                     type="submit"
-                    disabled={loading || uploading}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    disabled={isSubmitting || formSubmitting}
+                    className="flex-1"
+                    size="lg"
                   >
-                    {loading || uploading ? (
+                    {isSubmitting || formSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {uploading ? 'Uploading...' : 'Submitting...'}
+                        Submitting...
                       </>
                     ) : (
                       'Complete Registration'
@@ -726,11 +662,13 @@ export default function StudentRegistration() {
                   <Button
                     type="button"
                     onClick={() => {
-                      const steps = ['account', 'personal', 'contact', 'guardian', 'academic', 'documents']
-                      const currentIndex = steps.indexOf(currentStep)
-                      if (currentIndex < steps.length - 1) setCurrentStep(steps[currentIndex + 1])
+                      const currentIndex = STEPS.findIndex((s) => s.id === currentStep)
+                      if (currentIndex < STEPS.length - 1) {
+                        handleStepChange(STEPS[currentIndex + 1].id)
+                      }
                     }}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    className="flex-1"
+                    size="lg"
                   >
                     Next
                   </Button>
@@ -741,7 +679,7 @@ export default function StudentRegistration() {
               <div className="text-center pt-4 border-t">
                 <p className="text-sm text-gray-600">
                   Already registered?{' '}
-                  <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                  <Link href="/auth/login" className="text-primary hover:text-primary/80 font-medium">
                     Login here
                   </Link>
                 </p>
