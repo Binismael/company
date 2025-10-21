@@ -118,12 +118,17 @@ export default function LoginPage() {
       {/* Header Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg mb-4">
-            <span className="text-xl font-bold text-primary-600">⚜</span>
+          <div className="flex justify-center mb-4">
+            <img
+              src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
+              alt="El Bethel Academy Logo"
+              className="h-24 w-24"
+            />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-1">
             El Bethel Academy
           </h1>
+          <p className="text-lg text-gray-500 mb-2">Minna</p>
           <p className="text-xl text-secondary-500 font-medium">
             Next-Generation Learning Platform
           </p>
