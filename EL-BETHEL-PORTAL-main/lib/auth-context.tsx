@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { toast } from "sonner"
+import { supabase } from "./supabase-client"
 
 interface UserProfile {
   uid: string
@@ -13,23 +14,19 @@ interface UserProfile {
   photoURL?: string
   phoneNumber?: string
 
-  // Admin specific
   schoolName?: string
   schoolCode?: string
   adminCode?: string
 
-  // Teacher specific
   teacherCode?: string
   department?: string
   assignedClasses?: string[]
 
-  // Student specific
   class?: string
   studentId?: string
   regNo?: string
-  admissionCode?: string
+  admissionNumber?: string
 
-  // Common
   createdAt?: any
   lastLogin?: any
   isOnline?: boolean
@@ -41,9 +38,7 @@ interface AuthContextType {
   loading: boolean
   signUp: (email: string, password: string, role: string, additionalData?: any) => Promise<any>
   signIn: (email: string, password: string) => Promise<void>
-  signInWithGoogle: () => Promise<void>
-  signInWithMicrosoft: () => Promise<void>
-  signInAsGuest: () => Promise<void>
+  signInWithRegNumber: (regNumber: string, password: string) => Promise<void>
   logout: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updateProfile: (profileData: Partial<UserProfile>) => Promise<void>
@@ -63,101 +58,166 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Check for existing session on mount
   useEffect(() => {
-    const checkExistingSession = () => {
+    const checkSession = async () => {
       try {
-        const savedUser = localStorage.getItem("elbethel_user")
-        if (savedUser) {
-          const userData = JSON.parse(savedUser)
-          setUser(userData)
-          console.log("Restored user session:", userData.role)
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session?.user) {
+          const userData = await fetchUserProfile(session.user.id)
+          if (userData) {
+            setUser(userData)
+          }
         }
       } catch (error) {
-        console.error("Error restoring session:", error)
-        localStorage.removeItem("elbethel_user")
+        console.error("Error checking session:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    checkExistingSession()
+    checkSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const userData = await fetchUserProfile(session.user.id)
+        if (userData) {
+          setUser(userData)
+        }
+      } else {
+        setUser(null)
+      }
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
   }, [])
 
-  // Save user to localStorage whenever user changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("elbethel_user", JSON.stringify(user))
-    } else {
-      localStorage.removeItem("elbethel_user")
+  const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single()
+
+      if (error) throw error
+
+      let additionalData: any = {}
+
+      if (data.role === "student") {
+        const { data: studentData } = await supabase
+          .from("students")
+          .select("*")
+          .eq("user_id", userId)
+          .single()
+
+        if (studentData) {
+          additionalData = {
+            regNo: studentData.reg_number,
+            admissionNumber: studentData.admission_number,
+            class: studentData.class_id,
+          }
+        }
+      } else if (data.role === "teacher") {
+        const { data: teacherData } = await supabase
+          .from("teachers")
+          .select("*")
+          .eq("user_id", userId)
+          .single()
+
+        if (teacherData) {
+          additionalData = {
+            teacherCode: teacherData.teacher_code,
+            department: teacherData.department,
+          }
+        }
+      }
+
+      return {
+        uid: data.id,
+        email: data.email,
+        role: data.role,
+        fullName: data.full_name,
+        phoneNumber: data.phone_number,
+        isApproved: data.is_approved,
+        createdAt: data.created_at,
+        lastLogin: data.last_login,
+        ...additionalData,
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error)
+      return null
     }
-  }, [user])
+  }
 
   const signUp = async (email: string, password: string, role: string, additionalData?: any) => {
     try {
       setLoading(true)
 
-      // Validate role-specific requirements
-      if (role === "teacher" && !additionalData?.teacherCode) {
-        throw new Error("Teacher code is required for teacher registration")
-      }
-
-      if (role === "admin" && !additionalData?.schoolName) {
-        throw new Error("School name is required for admin registration")
-      }
-
-      // Generate codes for admin
-      let schoolCode = ""
-      let adminCode = ""
-      if (role === "admin") {
-        schoolCode = "SCH" + Math.random().toString(36).substr(2, 6).toUpperCase()
-        adminCode = "ADM" + Math.random().toString(36).substr(2, 6).toUpperCase()
-      }
-
-      const mockUser: UserProfile = {
-        uid: Math.random().toString(36).substr(2, 9),
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        role: role as UserProfile["role"],
-        fullName: additionalData?.fullName || `Demo ${role.charAt(0).toUpperCase() + role.slice(1)}`,
-        phoneNumber: additionalData?.phoneNumber,
+        password,
+      })
 
-        // Admin specific
-        schoolName: additionalData?.schoolName,
-        schoolCode,
-        adminCode,
+      if (authError) throw authError
+      if (!authData.user) throw new Error("Failed to create user account")
 
-        // Teacher specific
-        teacherCode: additionalData?.teacherCode,
-        department: additionalData?.department,
-        assignedClasses: additionalData?.assignedClasses || [],
+      const { error: userError } = await supabase.from("users").insert([
+        {
+          id: authData.user.id,
+          email,
+          full_name: additionalData?.fullName || email,
+          role,
+          phone_number: additionalData?.phoneNumber,
+          is_approved: role === "admin",
+        },
+      ])
 
-        // Student specific
-        class: additionalData?.class,
-        studentId: additionalData?.studentId,
-        regNo:
-          additionalData?.regNo ||
-          `EBS/2024/${Math.floor(Math.random() * 1000)
-            .toString()
-            .padStart(3, "0")}`,
-        admissionCode: additionalData?.admissionCode,
+      if (userError) throw userError
 
-        isOnline: true,
-        isApproved: role === "admin" ? true : false, // Admin auto-approved
-        createdAt: new Date(),
-        lastLogin: new Date(),
+      if (role === "student") {
+        const regNumber = additionalData?.regNumber || generateRegNumber()
+        const { error: studentError } = await supabase.from("students").insert([
+          {
+            user_id: authData.user.id,
+            admission_number: additionalData?.admissionNumber || `ADM${Date.now()}`,
+            reg_number: regNumber,
+            gender: additionalData?.gender,
+            date_of_birth: additionalData?.dateOfBirth,
+            guardian_name: additionalData?.guardianName,
+            guardian_phone: additionalData?.guardianPhone,
+            guardian_email: additionalData?.guardianEmail,
+            class_id: additionalData?.classId,
+            session_admitted: additionalData?.sessionAdmitted || "2024/2025",
+          },
+        ])
+
+        if (studentError) throw studentError
+      } else if (role === "teacher") {
+        const { error: teacherError } = await supabase.from("teachers").insert([
+          {
+            user_id: authData.user.id,
+            teacher_code: additionalData?.teacherCode || `TCH${Date.now()}`,
+            department: additionalData?.department,
+          },
+        ])
+
+        if (teacherError) throw teacherError
       }
 
-      setUser(mockUser)
-      console.log("User created with role:", role, mockUser)
-
-      if (role === "admin") {
-        toast.success(`Admin account created! School Code: ${schoolCode}, Admin Code: ${adminCode}`)
-        return { schoolCode, adminCode }
-      } else {
-        toast.success(`${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully!`)
+      const userData = await fetchUserProfile(authData.user.id)
+      if (userData) {
+        setUser(userData)
       }
 
-      return mockUser
+      toast.success(`${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully!`)
+      return userData
     } catch (error: any) {
       toast.error(error.message || "Failed to create account")
       throw error
@@ -170,129 +230,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
 
-      // Mock sign in with role detection based on email patterns
-      let userRole: UserProfile["role"] = "student" // default
-
-      // Enhanced role detection based on email patterns
-      if (email.includes("admin") || email.includes("principal") || email.includes("headmaster")) {
-        userRole = "admin"
-      } else if (email.includes("teacher") || email.includes("staff") || email.includes("faculty")) {
-        userRole = "teacher"
-      } else if (email.includes("bursar") || email.includes("finance") || email.includes("accounts")) {
-        userRole = "bursar"
-      } else if (
-        email.includes("parent") ||
-        email.includes("guardian") ||
-        email.includes("father") ||
-        email.includes("mother")
-      ) {
-        userRole = "parent"
-      }
-
-      // Create mock user based on detected role
-      const mockUser: UserProfile = {
-        uid: Math.random().toString(36).substr(2, 9),
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        role: userRole,
-        fullName: `Demo ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`,
-        isOnline: true,
-        lastLogin: new Date(),
+        password,
+      })
 
-        // Add role-specific data
-        ...(userRole === "admin" && {
-          schoolName: "El Bethel Academy",
-          schoolCode: "SCH123456",
-          adminCode: "ADM789012",
-        }),
-        ...(userRole === "teacher" && {
-          department: "Mathematics",
-          assignedClasses: ["SS1A", "SS1B", "SS2A"],
-        }),
-        ...(userRole === "student" && {
-          class: "SS2A",
-          regNo: "EBS/2024/001",
-        }),
-        ...(userRole === "parent" &&
-          {
-            // Parent can have child info
-          }),
+      if (error) throw error
+      if (!data.user) throw new Error("Failed to sign in")
+
+      const userData = await fetchUserProfile(data.user.id)
+      if (userData) {
+        setUser(userData)
+        toast.success(`Welcome back, ${userData.role}!`)
       }
-
-      setUser(mockUser)
-      console.log("User signed in with role:", userRole, mockUser)
-      toast.success(`Welcome back, ${userRole}!`)
     } catch (error: any) {
-      toast.error("Failed to sign in")
+      toast.error(error.message || "Failed to sign in")
       throw error
     } finally {
       setLoading(false)
     }
   }
 
-  const signInWithGoogle = async () => {
+  const signInWithRegNumber = async (regNumber: string, password: string) => {
     try {
       setLoading(true)
-      const mockUser: UserProfile = {
-        uid: Math.random().toString(36).substr(2, 9),
-        email: "demo@google.com",
-        role: "student",
-        fullName: "Google User",
-        photoURL: "https://via.placeholder.com/40",
-        isOnline: true,
-        lastLogin: new Date(),
-        class: "SS2A",
-        regNo: "EBS/2024/002",
-      }
-      setUser(mockUser)
-      toast.success("Signed in with Google!")
-    } catch (error: any) {
-      toast.error("Failed to sign in with Google")
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const signInWithMicrosoft = async () => {
-    try {
-      setLoading(true)
-      const mockUser: UserProfile = {
-        uid: Math.random().toString(36).substr(2, 9),
-        email: "demo@microsoft.com",
-        role: "student",
-        fullName: "Microsoft User",
-        isOnline: true,
-        lastLogin: new Date(),
-        class: "SS2A",
-        regNo: "EBS/2024/003",
-      }
-      setUser(mockUser)
-      toast.success("Signed in with Microsoft!")
-    } catch (error: any) {
-      toast.error("Failed to sign in with Microsoft")
-      throw error
-    } finally {
-      setLoading(false)
-    }
-  }
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("users(id, email, role)")
+        .eq("reg_number", regNumber)
+        .single()
 
-  const signInAsGuest = async () => {
-    try {
-      setLoading(true)
-      const mockUser: UserProfile = {
-        uid: "guest-" + Math.random().toString(36).substr(2, 9),
-        email: "guest@elbethel.edu",
-        role: "student",
-        fullName: "Guest User",
-        isOnline: true,
-        lastLogin: new Date(),
-        class: "SS2A",
-        regNo: "EBS/2024/GUEST",
+      if (studentError || !studentData) {
+        throw new Error("Invalid registration number")
       }
-      setUser(mockUser)
-      toast.success("Signed in as guest!")
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: studentData.users.email,
+        password,
+      })
+
+      if (error) throw error
+      if (!data.user) throw new Error("Failed to sign in")
+
+      const userData = await fetchUserProfile(data.user.id)
+      if (userData) {
+        setUser(userData)
+        toast.success("Welcome back!")
+      }
     } catch (error: any) {
-      toast.error("Failed to sign in as guest")
+      toast.error(error.message || "Failed to sign in")
       throw error
     } finally {
       setLoading(false)
@@ -301,8 +288,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      await supabase.auth.signOut()
       setUser(null)
-      localStorage.removeItem("elbethel_user")
       toast.success("Signed out successfully")
     } catch (error: any) {
       toast.error("Failed to sign out")
@@ -312,6 +299,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email)
+      if (error) throw error
       toast.success("Password reset email sent!")
     } catch (error: any) {
       toast.error("Failed to send password reset email")
@@ -323,6 +312,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error("No user logged in")
 
     try {
+      const { error } = await supabase.from("users").update(profileData).eq("id", user.uid)
+
+      if (error) throw error
+
       const updatedUser = { ...user, ...profileData }
       setUser(updatedUser)
       toast.success("Profile updated successfully")
@@ -332,14 +325,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const generateRegNumber = (): string => {
+    const year = new Date().getFullYear().toString().slice(-2)
+    const random = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0")
+    return `ELBA/${year}/${random}`
+  }
+
   const value: AuthContextType = {
     user,
     loading,
     signUp,
     signIn,
-    signInWithGoogle,
-    signInWithMicrosoft,
-    signInAsGuest,
+    signInWithRegNumber,
     logout,
     resetPassword,
     updateProfile,

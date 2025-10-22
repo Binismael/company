@@ -58,6 +58,11 @@ export default function AdminPortalLayout({
       icon: <Users className="w-5 h-5" />,
     },
     {
+      label: 'Student Registration',
+      href: '/admin/registrations/create-student',
+      icon: <Users className="w-5 h-5" />,
+    },
+    {
       label: 'Classes & Subjects',
       href: '/admin/classes',
       icon: <BookOpen className="w-5 h-5" />,
