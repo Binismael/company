@@ -30,9 +30,19 @@ export default function LoginPage() {
     try {
       let loginEmail = email
 
-      if (loginType === 'reg-number') {
+      if (loginType === 'email') {
+        if (!email.trim()) {
+          throw new Error('Email address is required')
+        }
+        if (!password.trim()) {
+          throw new Error('Password is required')
+        }
+      } else if (loginType === 'reg-number') {
         if (!regNumber.trim()) {
           throw new Error('Registration number is required')
+        }
+        if (!password.trim()) {
+          throw new Error('Password is required')
         }
 
         const student = await findStudentByRegNumber(regNumber)
