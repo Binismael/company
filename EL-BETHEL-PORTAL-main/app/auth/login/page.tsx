@@ -402,6 +402,14 @@ export default function LoginPage() {
                   Forgot your password?
                 </Link>
               </p>
+              <p>
+                <Link
+                  href="/auth/register"
+                  className="text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Create an account
+                </Link>
+              </p>
             </div>
           </CardContent>
         </Card>
