@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock, Bell, Megaphone } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 import StudentPortalLayout from '@/components/student-portal-layout'
+import { useStudentApprovalGuard } from '@/hooks/use-student-approval-guard'
 
 interface Student {
   id: string
