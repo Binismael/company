@@ -77,8 +77,14 @@ export default function LoginPage() {
           .select('*')
           .eq('id', authData.user.id)
 
-        if (userError || !userDataArray || userDataArray.length === 0) {
-          throw new Error('User not found')
+        if (userError) {
+          console.error('Database error fetching user:', userError)
+          throw new Error('Failed to fetch user profile: ' + userError.message)
+        }
+
+        if (!userDataArray || userDataArray.length === 0) {
+          console.error('No user record found for auth user ID:', authData.user.id)
+          throw new Error('User account not found in the system. Please contact your administrator to create your account.')
         }
 
         const userData = userDataArray[0]
