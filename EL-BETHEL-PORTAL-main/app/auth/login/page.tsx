@@ -290,7 +290,6 @@ export default function LoginPage() {
                       placeholder="ELBA/25/SS3B/001"
                       value={regNumber}
                       onChange={(e) => setRegNumber(e.target.value.toUpperCase())}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
@@ -309,7 +308,6 @@ export default function LoginPage() {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
