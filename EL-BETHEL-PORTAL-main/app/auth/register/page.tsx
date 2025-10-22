@@ -118,6 +118,24 @@ export default function RegisterPage() {
         },
       })
 
+      // If creating an admin, delegate to secure server API (bypasses RLS)
+      if (role === 'admin') {
+        const res = await fetch('/api/auth/create-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.first_name || formData.email,
+          }),
+        })
+        const payload = await res.json()
+        if (!res.ok) throw new Error(payload.error || 'Failed to create admin')
+        setSuccess(true)
+        setTimeout(() => router.push('/auth/login'), 1500)
+        return
+      }
+
       if (authError) throw new Error(authError.message)
       if (!authData.user) throw new Error('Failed to create account')
 
@@ -267,7 +285,7 @@ export default function RegisterPage() {
             ☁️ Cloud-Native
           </Badge>
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            ���� Mobile-First
+            📱 Mobile-First
           </Badge>
         </div>
       </div>
