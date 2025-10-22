@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   GraduationCap,
   Users,
@@ -10,8 +11,17 @@ import {
   Brain,
   Shield,
   ArrowRight,
+  MapPin,
+  Phone,
+  Mail,
+  Star,
+  Calendar,
+  CheckCircle,
+  MessageSquare,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 const roles = [
   {
@@ -49,142 +59,159 @@ const roles = [
   {
     id: 'bursar',
     title: 'Bursar',
-    description: 'Manage school finances and student payments',
+    description: 'Manage fees, payments, and financial records',
     icon: CreditCard,
     color: 'from-yellow-500 to-yellow-600',
-    features: ['Track Payments', 'Manage Fees', 'Payment Reports'],
+    features: ['Fee Management', 'Payment Processing', 'Financial Reports'],
   },
 ]
 
+const teachers = [
+  { name: 'Mr. Adebayo Johnson', subject: 'Mathematics', image: 'https://via.placeholder.com/150?text=Teacher+1' },
+  { name: 'Mrs. Chioma Okafor', subject: 'English Language', image: 'https://via.placeholder.com/150?text=Teacher+2' },
+  { name: 'Dr. Emeka Okonkwo', subject: 'Physics', image: 'https://via.placeholder.com/150?text=Teacher+3' },
+  { name: 'Ms. Folake Adeyemi', subject: 'Biology', image: 'https://via.placeholder.com/150?text=Teacher+4' },
+]
+
+const testimonials = [
+  { name: 'Abigail Obi', role: 'Student, SS3', text: 'This platform made learning fun and interactive. I can access my grades anytime!' },
+  { name: 'Mr. Yinka Adebule', role: 'Parent', text: 'I can now monitor my child\'s progress easily. Great initiative!' },
+  { name: 'Miss Zainab Ibrahim', role: 'Teacher', text: 'Managing attendance and results is now seamless. A game-changer!' },
+]
+
+const features = [
+  { icon: Brain, title: 'CBT Exams', desc: 'Students take online exams with instant grading and feedback' },
+  { icon: CheckCircle, title: 'Result Management', desc: 'Automated score computation and result sheet generation' },
+  { icon: CreditCard, title: 'Fee Payment', desc: 'Secure online payments via Paystack' },
+  { icon: Calendar, title: 'Attendance', desc: 'Track and report student attendance' },
+  { icon: MessageSquare, title: 'Communication', desc: 'Messaging and announcements between teachers and students' },
+  { icon: BookOpen, title: 'Learning Materials', desc: 'Upload class notes, assignments, and past questions' },
+]
+
+const news = [
+  { date: '2025-01-15', title: 'Portal Launch Announcement', desc: 'El Bethel Academy Portal is now live!' },
+  { date: '2025-01-10', title: 'New CBT Exam Module', desc: 'Students can now take online exams with instant results.' },
+  { date: '2025-01-05', title: 'Payment Integration Ready', desc: 'Paystack integration for school fees is now available.' },
+]
+
 export default function LandingPage() {
+  const [email, setEmail] = useState('')
+  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' })
+
+  const handleNewsletterSignup = () => {
+    if (!email) {
+      toast.error('Please enter your email')
+      return
+    }
+    toast.success(`Newsletter signup from: ${email}`)
+    setEmail('')
+  }
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+      toast.error('Please fill in all fields')
+      return
+    }
+    toast.success(`Message sent! We'll contact you at ${contactForm.email}`)
+    setContactForm({ name: '', email: '', message: '' })
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
       {/* Navigation */}
-      <nav className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <img
-                src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
-                alt="El Bethel Academy Logo"
-                className="h-10 w-10"
-              />
-              <div>
-                <h1 className="text-xl font-bold text-primary-700">
-                  El Bethel Academy
-                </h1>
-                <p className="text-xs text-gray-500">Minna</p>
-              </div>
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="https://via.placeholder.com/50?text=Logo" alt="Logo" className="h-12 w-12 rounded-lg" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">El Bethel Academy</h1>
+              <p className="text-sm text-gray-500">Minna</p>
             </div>
-            <div className="flex gap-4">
-              <Link href="/auth/login">
-                <Button variant="outline">Login</Button>
-              </Link>
-              <Link href="/auth/register">
-                <Button className="bg-primary-600 hover:bg-primary-700">
-                  Register
-                </Button>
-              </Link>
-            </div>
+          </div>
+          <div className="hidden md:flex gap-8">
+            <a href="#" className="text-gray-600 hover:text-gray-900">Home</a>
+            <a href="#about" className="text-gray-600 hover:text-gray-900">About</a>
+            <a href="#programs" className="text-gray-600 hover:text-gray-900">Programs</a>
+            <a href="#contact" className="text-gray-600 hover:text-gray-900">Contact</a>
+            <a href="/auth/login" className="text-primary-600 hover:text-primary-700 font-medium">Portal</a>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/auth/login">
+              <Button variant="outline">Login</Button>
+            </Link>
+            <Link href="/auth/register">
+              <Button>Register</Button>
+            </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center space-y-6 mb-20">
-          <h2 className="text-5xl font-bold text-gray-900">
-            Next-Generation Learning Platform
+        <div className="text-center mb-16">
+          <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            Empowering Education Through Technology
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            AI-Powered School Management System with Advanced Analytics, Real-time Collaboration, and Secure Access for Students, Teachers, Parents, and Administrators.
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            A unified portal for students, teachers, and administrators to manage classes, exams, payments, and communication easily.
           </p>
           <div className="flex gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="gap-2 bg-primary-600 hover:bg-primary-700">
-                Get Started <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
             <Link href="/auth/login">
-              <Button size="lg" variant="outline">
-                Sign In
+              <Button size="lg" className="gap-2">
+                <CheckCircle className="h-5 w-5" />
+                Login to Portal
               </Button>
             </Link>
+            <Button size="lg" variant="outline" className="gap-2">
+              <Mail className="h-5 w-5" />
+              Apply for Admission
+            </Button>
+            <a href="#contact">
+              <Button size="lg" variant="outline" className="gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Contact Us
+              </Button>
+            </a>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
-          <Card className="text-center">
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-primary-600 mb-2">1,200+</div>
-              <p className="text-gray-600">Active Students</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center">
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-green-600 mb-2">85+</div>
-              <p className="text-gray-600">Expert Teachers</p>
-            </CardContent>
-          </Card>
-          <Card className="text-center">
-            <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-blue-600 mb-2">99.9%</div>
-              <p className="text-gray-600">System Uptime</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Features */}
-        <div className="mb-20">
-          <h3 className="text-3xl font-bold text-center mb-12">
-            Powerful Features
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader>
-                <Brain className="h-8 w-8 text-blue-600 mb-2" />
-                <CardTitle>AI-Powered Learning</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  Intelligent tutoring system that adapts to each student's learning pace
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <Users className="h-8 w-8 text-green-600 mb-2" />
-                <CardTitle>Real-time Collaboration</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  Seamless communication between students, teachers, and parents
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <Shield className="h-8 w-8 text-purple-600 mb-2" />
-                <CardTitle>Advanced Security</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  Enterprise-grade encryption and role-based access control
-                </p>
-              </CardContent>
-            </Card>
+        {/* About Section */}
+        <div id="about" className="mb-20 bg-white rounded-2xl p-12 shadow-lg">
+          <h3 className="text-3xl font-bold mb-6">About El Bethel Academy</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 className="text-xl font-bold mb-4">Our Mission</h4>
+              <p className="text-gray-600 mb-6">
+                To provide world-class education that develops critical thinkers, responsible citizens, and innovative problem-solvers equipped with the skills for global competitiveness.
+              </p>
+              <h4 className="text-xl font-bold mb-4">Our Vision</h4>
+              <p className="text-gray-600">
+                To be the leading educational institution in Nigeria, recognized for academic excellence, character development, and technological innovation.
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-100 to-yellow-100 rounded-xl p-8">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-4xl font-bold text-blue-600">15+</p>
+                  <p className="text-gray-600">Years of Excellence</p>
+                </div>
+                <div>
+                  <p className="text-4xl font-bold text-green-600">500+</p>
+                  <p className="text-gray-600">Alumni Success Stories</p>
+                </div>
+                <div>
+                  <p className="text-4xl font-bold text-purple-600">100%</p>
+                  <p className="text-gray-600">Student-Centered Approach</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Academic Structure */}
-        <div className="mb-20">
-          <h3 className="text-3xl font-bold text-center mb-4">
-            Our Academic Structure
-          </h3>
-          <p className="text-xl text-gray-600 text-center max-w-3xl mx-auto mb-12">
-            Our comprehensive curriculum covers Junior Secondary (JSS1–JSS3) and Senior Secondary (SS1–SS3) levels, preparing students with a strong foundation in academics, leadership, and technology.
-          </p>
+        {/* Programs Section */}
+        <div id="programs" className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-12">Our Programs</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card>
               <CardHeader>
@@ -192,12 +219,12 @@ export default function LandingPage() {
                 <CardDescription>Grades 7-9</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
+                <p className="text-gray-600 mb-4">Foundation & Exploration phase focusing on basic competencies.</p>
+                <ul className="space-y-2">
                   {['JSS1', 'JSS2', 'JSS3'].map((level) => (
-                    <li key={level} className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-blue-600" />
-                      <span className="font-medium text-gray-700">{level}</span>
-                      <span className="text-sm text-gray-500">Foundation & Exploration</span>
+                    <li key={level} className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                      <span className="text-gray-700">{level} - Full curriculum</span>
                     </li>
                   ))}
                 </ul>
@@ -209,12 +236,12 @@ export default function LandingPage() {
                 <CardDescription>Grades 10-12</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
+                <p className="text-gray-600 mb-4">Specialization & Excellence phase with WAEC preparation.</p>
+                <ul className="space-y-2">
                   {['SS1', 'SS2', 'SS3'].map((level) => (
-                    <li key={level} className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-green-600" />
-                      <span className="font-medium text-gray-700">{level}</span>
-                      <span className="text-sm text-gray-500">Specialization & Excellence</span>
+                    <li key={level} className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-gray-700">{level} - Advanced subjects</span>
                     </li>
                   ))}
                 </ul>
@@ -223,11 +250,190 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Teachers Section */}
+        <div className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-12">Our Expert Teachers</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {teachers.map((teacher) => (
+              <Card key={teacher.name} className="text-center">
+                <CardContent className="pt-6">
+                  <img src={teacher.image} alt={teacher.name} className="w-24 h-24 rounded-full mx-auto mb-4 object-cover" />
+                  <h4 className="font-bold text-lg mb-2">{teacher.name}</h4>
+                  <p className="text-sm text-gray-600 font-medium">{teacher.subject}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-12">Portal Features</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature) => {
+              const Icon = feature.icon
+              return (
+                <Card key={feature.title}>
+                  <CardHeader>
+                    <Icon className="h-8 w-8 text-primary-600 mb-2" />
+                    <CardTitle>{feature.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600">{feature.desc}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Gallery Section */}
+        <div className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-12">School Gallery</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="relative overflow-hidden rounded-xl group">
+                <img
+                  src={`https://via.placeholder.com/400x300?text=Gallery+${i}`}
+                  alt={`Gallery ${i}`}
+                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform"
+                />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-all flex items-center justify-center">
+                  <p className="text-white text-lg font-bold">School Facility {i}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* News Section */}
+        <div className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-12">Latest News & Updates</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {news.map((item) => (
+              <Card key={item.title} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <p className="text-sm text-gray-500">{item.date}</p>
+                  <CardTitle className="text-xl">{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">{item.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Testimonials Section */}
+        <div className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-12">What People Say</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial) => (
+              <Card key={testimonial.name}>
+                <CardContent className="pt-6">
+                  <div className="flex gap-1 mb-3">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    ))}
+                  </div>
+                  <p className="text-gray-600 mb-4">"{testimonial.text}"</p>
+                  <p className="font-bold text-gray-900">{testimonial.name}</p>
+                  <p className="text-sm text-gray-500">{testimonial.role}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Contact Section */}
+        <div id="contact" className="mb-20 bg-white rounded-2xl p-12 shadow-lg">
+          <h3 className="text-3xl font-bold mb-12 text-center">Get In Touch</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            {/* Contact Info */}
+            <div>
+              <h4 className="text-xl font-bold mb-8">Contact Information</h4>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <MapPin className="h-6 w-6 text-primary-600 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-gray-900">Address</p>
+                    <p className="text-gray-600">Opposite Off Bida Road, Zakka Villge, Gbaganu Minna, Niger State</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <Phone className="h-6 w-6 text-primary-600 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-gray-900">Phone</p>
+                    <p className="text-gray-600">+234 806 092 0319</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <Mail className="h-6 w-6 text-primary-600 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-gray-900">Email</p>
+                    <p className="text-gray-600">elbethelacademy99@gmail.com</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Form */}
+            <form onSubmit={handleContactSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Name</label>
+                <Input
+                  placeholder="Your name"
+                  value={contactForm.name}
+                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <Input
+                  type="email"
+                  placeholder="Your email"
+                  value={contactForm.email}
+                  onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Message</label>
+                <textarea
+                  placeholder="Your message"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  rows={4}
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                ></textarea>
+              </div>
+              <Button type="submit" className="w-full">Send Message</Button>
+            </form>
+          </div>
+        </div>
+
+        {/* Newsletter Section */}
+        <div className="mb-20 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-2xl p-12 text-center text-white">
+          <h3 className="text-3xl font-bold mb-4">Subscribe to Our Newsletter</h3>
+          <p className="text-white/90 mb-8 max-w-2xl mx-auto">
+            Get the latest updates about new features, announcements, and school news.
+          </p>
+          <div className="flex gap-2 max-w-md mx-auto">
+            <Input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-white text-gray-900"
+            />
+            <Button onClick={handleNewsletterSignup} className="bg-white text-primary-600 hover:bg-gray-100">
+              Subscribe
+            </Button>
+          </div>
+        </div>
+
         {/* Role Selection */}
         <div className="mb-20">
-          <h3 className="text-3xl font-bold text-center mb-12">
-            Choose Your Role
-          </h3>
+          <h3 className="text-3xl font-bold text-center mb-12">Choose Your Role</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {roles.map((role) => {
               const IconComponent = role.icon
@@ -270,33 +476,6 @@ export default function LandingPage() {
             })}
           </div>
         </div>
-
-        {/* CTA Section */}
-        <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-2xl p-12 text-center text-white">
-          <h3 className="text-3xl font-bold mb-4">
-            Ready to Transform Your School Experience?
-          </h3>
-          <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-            Join thousands of students, teachers, and parents using El Bethel Academy's
-            cutting-edge learning platform.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Link href="/auth/register">
-              <Button size="lg" className="bg-white text-primary-600 hover:bg-gray-100">
-                Register Now
-              </Button>
-            </Link>
-            <Link href="/auth/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white/20"
-              >
-                Login to Your Account
-              </Button>
-            </Link>
-          </div>
-        </div>
       </div>
 
       {/* Footer */}
@@ -306,11 +485,19 @@ export default function LandingPage() {
             <div>
               <h4 className="font-bold mb-4">El Bethel Academy</h4>
               <p className="text-gray-400">
-                Next-Generation Learning Platform
+                Empowering Education Through Technology
               </p>
             </div>
             <div>
-              <h4 className="font-bold mb-4">For Users</h4>
+              <h4 className="font-bold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#about" className="hover:text-white">About</a></li>
+                <li><a href="#programs" className="hover:text-white">Programs</a></li>
+                <li><a href="#contact" className="hover:text-white">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Portal</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
                   <Link href="/auth/login" className="hover:text-white">
@@ -325,17 +512,10 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Features</h4>
+              <h4 className="font-bold mb-4">Contact</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Results Management</a></li>
-                <li><a href="#" className="hover:text-white">Attendance Tracking</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Documentation</a></li>
-                <li><a href="#" className="hover:text-white">Contact Us</a></li>
+                <li>elbethelacademy99@gmail.com</li>
+                <li>+234 806 092 0319</li>
               </ul>
             </div>
           </div>
