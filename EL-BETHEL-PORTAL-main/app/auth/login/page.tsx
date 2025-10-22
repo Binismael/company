@@ -351,13 +351,8 @@ export default function LoginPage() {
 
             {/* Links */}
             <div className="space-y-2 text-sm text-center">
-              <p>
-                <Link
-                  href="/auth/register"
-                  className="text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Don't have an account? Register
-                </Link>
+              <p className="text-gray-500">
+                Admin-managed accounts only. Contact your administrator to create an account.
               </p>
               <p>
                 <Link
