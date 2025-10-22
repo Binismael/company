@@ -32,7 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE TABLE IF NOT EXISTS classes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL UNIQUE,
-  form_level TEXT NOT NULL CHECK (form_level IN ('SS1', 'SS2', 'SS3', 'JSS1', 'JSS2', 'JSS3')),
+  form_level TEXT NOT NULL CHECK (form_level IN ('JSS1', 'JSS2', 'JSS3', 'SS1', 'SS2', 'SS3')),
   class_teacher_id UUID REFERENCES users(id) ON DELETE SET NULL,
   capacity INT DEFAULT 40,
   created_at TIMESTAMP DEFAULT now(),
@@ -385,17 +385,20 @@ CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
 -- SAMPLE DATA
 -- ============================================
 
--- Sample Classes
+-- Sample Classes (JSS = Junior Secondary, SS = Senior Secondary)
 INSERT INTO classes (name, form_level) VALUES
-  ('SS3 A', 'SS3'),
-  ('SS3 B', 'SS3'),
-  ('SS2 A', 'SS2'),
-  ('SS2 B', 'SS2'),
+  ('JSS1 A', 'JSS1'),
+  ('JSS1 B', 'JSS1'),
+  ('JSS2 A', 'JSS2'),
+  ('JSS2 B', 'JSS2'),
+  ('JSS3 A', 'JSS3'),
+  ('JSS3 B', 'JSS3'),
   ('SS1 A', 'SS1'),
   ('SS1 B', 'SS1'),
-  ('JSS3 A', 'JSS3'),
-  ('JSS2 A', 'JSS2'),
-  ('JSS1 A', 'JSS1')
+  ('SS2 A', 'SS2'),
+  ('SS2 B', 'SS2'),
+  ('SS3 A', 'SS3'),
+  ('SS3 B', 'SS3')
 ON CONFLICT DO NOTHING;
 
 -- Sample Subjects
