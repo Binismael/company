@@ -50,6 +50,7 @@ interface Assignment {
 
 export default function StudentDashboard() {
   const router = useRouter()
+  const { isLoading: approvalLoading, isApproved } = useStudentApprovalGuard()
   const [student, setStudent] = useState<Student | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [attendance, setAttendance] = useState<Attendance[]>([])
