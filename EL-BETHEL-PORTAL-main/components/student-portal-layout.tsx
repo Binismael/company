@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -23,9 +23,11 @@ import {
   Home,
   Sparkles,
   X,
+  Loader2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
+import { useStudentApprovalGuard } from '@/hooks/use-student-approval-guard'
 
 interface NavItem {
   label: string
