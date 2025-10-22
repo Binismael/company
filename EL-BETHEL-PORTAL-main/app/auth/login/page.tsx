@@ -30,6 +30,7 @@ export default function LoginPage() {
 
     try {
       let loginEmail = email
+      let studentId: string | null = null
 
       if (loginType === 'email') {
         if (!email.trim()) {
@@ -50,6 +51,8 @@ export default function LoginPage() {
         if (!student) {
           throw new Error('Registration number not found')
         }
+
+        studentId = student.id
 
         const { data: userDataArray, error: userError } = await supabase
           .from('users')
@@ -88,6 +91,28 @@ export default function LoginPage() {
         }
 
         const userData = userDataArray[0]
+
+        // Check if student is approved (if role is student)
+        if (userData.role === 'student') {
+          const { data: studentData, error: studentError } = await supabase
+            .from('students')
+            .select('approved')
+            .eq('user_id', authData.user.id)
+            .single()
+
+          if (studentError) {
+            console.error('Error checking student approval status:', studentError)
+            throw new Error('Failed to verify account status')
+          }
+
+          if (!studentData?.approved) {
+            // Sign them out immediately
+            await supabase.auth.signOut()
+            throw new Error(
+              'Your account is pending admin approval. Please check your email for updates. Contact your school administrator if you have questions.'
+            )
+          }
+        }
 
         sessionStorage.setItem('user', JSON.stringify(userData))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
