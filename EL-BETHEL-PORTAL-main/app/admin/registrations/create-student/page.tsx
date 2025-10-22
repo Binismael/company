@@ -344,11 +344,20 @@ export default function CreateStudentPage() {
                     disabled={classesLoading}
                   >
                     <option value="">Select a class</option>
-                    {classes.map((cls) => (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.name} ({cls.form_level})
-                      </option>
-                    ))}
+                    <optgroup label="Junior Secondary (JSS)">
+                      {classes.filter(c => c.form_level?.startsWith('JSS')).map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Senior Secondary (SS)">
+                      {classes.filter(c => c.form_level?.startsWith('SS')).map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                   {errors.classId && (
                     <p className="text-xs text-red-600 mt-1">{errors.classId}</p>
