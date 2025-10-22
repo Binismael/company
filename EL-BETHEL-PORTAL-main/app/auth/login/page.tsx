@@ -235,7 +235,6 @@ export default function LoginPage() {
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
@@ -251,7 +250,6 @@ export default function LoginPage() {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
