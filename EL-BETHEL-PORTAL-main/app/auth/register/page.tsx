@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Brain, Zap, Shield, Users, BookOpen, CheckCircle } from 'lucide-react'
+import { Loader2, Brain, Zap, Shield, Users, BookOpen, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 
 interface StudentFormData {
@@ -41,6 +41,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const [formData, setFormData] = useState<StudentFormData>({
     first_name: '',
@@ -265,7 +267,7 @@ export default function RegisterPage() {
             ☁️ Cloud-Native
           </Badge>
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            📱 Mobile-First
+            ���� Mobile-First
           </Badge>
         </div>
       </div>
@@ -324,6 +326,7 @@ export default function RegisterPage() {
                       <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="teacher">Teacher</SelectItem>
                       <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -569,17 +572,27 @@ export default function RegisterPage() {
                   <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-gray-700">
                     Password
                   </label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Create a strong password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    className="rounded-lg"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Create a strong password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                      className="rounded-lg pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">
                     Must be at least 6 characters long
                   </p>
@@ -589,17 +602,27 @@ export default function RegisterPage() {
                   <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5 text-gray-700">
                     Confirm Password
                   </label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    disabled={loading}
-                    className="rounded-lg"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirm ? 'text' : 'password'}
+                      placeholder="Confirm your password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                      className="rounded-lg pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowConfirm((s) => !s)}
+                      className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700"
+                    >
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <Button
