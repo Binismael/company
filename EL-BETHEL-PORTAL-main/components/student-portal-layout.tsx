@@ -43,6 +43,7 @@ export default function StudentPortalLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { isLoading: approvalLoading, isApproved } = useStudentApprovalGuard()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
 
