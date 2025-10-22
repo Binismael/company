@@ -61,13 +61,16 @@ export default function LoginPage() {
       if (authError) throw new Error(authError.message)
 
       if (authData.user) {
-        const { data: userData, error: userError } = await supabase
+        const { data: userDataArray, error: userError } = await supabase
           .from('users')
           .select('*')
           .eq('id', authData.user.id)
-          .single()
 
-        if (userError) throw new Error('User not found')
+        if (userError || !userDataArray || userDataArray.length === 0) {
+          throw new Error('User not found')
+        }
+
+        const userData = userDataArray[0]
 
         sessionStorage.setItem('user', JSON.stringify(userData))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
