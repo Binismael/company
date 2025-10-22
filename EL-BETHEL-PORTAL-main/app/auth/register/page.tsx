@@ -15,28 +15,63 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Brain, Zap, Shield, Users, BookOpen } from 'lucide-react'
+import { Loader2, Brain, Zap, Shield, Users, BookOpen, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
+
+interface StudentFormData {
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+  confirmPassword: string
+  phone: string
+  gender: string
+  dateOfBirth: string
+  class: string
+  section: string
+  guardianName: string
+  guardianPhone: string
+  guardianEmail: string
+  address: string
+}
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
+  const [role, setRole] = useState('student')
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
+
+  const [formData, setFormData] = useState<StudentFormData>({
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    full_name: '',
-    role: 'student',
+    phone: '',
+    gender: 'Male',
+    dateOfBirth: '',
+    class: '',
+    section: '',
+    guardianName: '',
+    guardianPhone: '',
+    guardianEmail: '',
+    address: '',
   })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleRoleChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, role: value }))
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const generateRegNumber = (): string => {
+    const year = new Date().getFullYear().toString().slice(-2)
+    const idx = Math.floor(Math.random() * 900 + 100).toString()
+    return `ELBA/${year}/${formData.class}${formData.section}/${idx}`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,6 +80,23 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
+      if (role === 'student') {
+        // Student-specific validation
+        if (!formData.first_name.trim() || !formData.last_name.trim()) {
+          throw new Error('First name and last name are required')
+        }
+        if (!formData.class || !formData.section) {
+          throw new Error('Class and section are required')
+        }
+        if (!formData.guardianName.trim()) {
+          throw new Error('Guardian name is required')
+        }
+      }
+
+      if (!formData.email.trim()) {
+        throw new Error('Email is required')
+      }
+
       if (formData.password !== formData.confirmPassword) {
         throw new Error('Passwords do not match')
       }
@@ -53,50 +105,86 @@ export default function RegisterPage() {
         throw new Error('Password must be at least 6 characters')
       }
 
+      // Create Supabase Auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
-            full_name: formData.full_name,
-            role: formData.role,
+            role,
           },
         },
       })
 
       if (authError) throw new Error(authError.message)
+      if (!authData.user) throw new Error('Failed to create account')
 
-      if (authData.user) {
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: authData.user.id,
-              email: formData.email,
-              full_name: formData.full_name,
-              role: formData.role,
-              password_hash: '',
-            },
-          ])
+      const userId = authData.user.id
 
-        if (dbError) throw new Error(dbError.message)
+      // Create user record
+      const { error: userError } = await supabase.from('users').insert([
+        {
+          id: userId,
+          email: formData.email,
+          full_name: role === 'student' ? `${formData.first_name} ${formData.last_name}` : formData.first_name,
+          role,
+          is_approved: role !== 'student',
+        },
+      ])
 
-        if (formData.role === 'student') {
-          const { error: studentError } = await supabase
-            .from('students')
-            .insert([
-              {
-                user_id: authData.user.id,
-                admission_number: `STU-${Date.now()}`,
-              },
-            ])
+      if (userError) throw new Error(userError.message)
 
-          if (studentError) throw new Error(studentError.message)
-        }
+      // If student, create student record with approval flag
+      if (role === 'student') {
+        const regNumber = generateRegNumber()
 
-        alert('Registration successful! Please log in.')
-        router.push('/auth/login')
+        const { error: studentError } = await supabase.from('students').insert([
+          {
+            user_id: userId,
+            reg_number: regNumber,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            phone: formData.phone || null,
+            gender: formData.gender,
+            date_of_birth: formData.dateOfBirth || null,
+            class: formData.class,
+            section: formData.section,
+            guardian_name: formData.guardianName,
+            guardian_phone: formData.guardianPhone,
+            guardian_email: formData.guardianEmail,
+            address: formData.address || null,
+            approved: false,
+          },
+        ])
+
+        if (studentError) throw new Error(studentError.message)
       }
+
+      setSuccess(true)
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phone: '',
+        gender: 'Male',
+        dateOfBirth: '',
+        class: '',
+        section: '',
+        guardianName: '',
+        guardianPhone: '',
+        guardianEmail: '',
+        address: '',
+      })
+
+      setTimeout(() => {
+        if (role === 'student') {
+          router.push('/auth/login?message=pending-approval')
+        } else {
+          router.push('/auth/login')
+        }
+      }, 3000)
     } catch (err: any) {
       setError(err.message || 'Registration failed')
     } finally {
@@ -129,7 +217,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
-      {/* Header Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-lg mb-4">
@@ -143,9 +230,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* Stats and Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-          {/* Stats */}
           {stats.map((stat) => {
             const Icon = stat.icon
             return (
@@ -161,7 +246,6 @@ export default function RegisterPage() {
             )
           })}
 
-          {/* Features */}
           {features.map((feature) => {
             const Icon = feature.icon
             return (
@@ -174,7 +258,6 @@ export default function RegisterPage() {
           })}
         </div>
 
-        {/* Badges */}
         <div className="flex flex-wrap gap-2 justify-center mb-12">
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
             🤖 AI-Enhanced
@@ -188,8 +271,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* Register Section */}
-      <div className="max-w-md mx-auto px-4 pb-12">
+      <div className="max-w-2xl mx-auto px-4 pb-12">
         <Card className="shadow-xl border-0 rounded-2xl">
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
@@ -203,119 +285,343 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div>
-                <label htmlFor="full_name" className="block text-sm font-medium mb-1.5 text-gray-700">
-                  Full Name
-                </label>
-                <Input
-                  id="full_name"
-                  name="full_name"
-                  placeholder="Enter your full name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-gray-700">
-                  Email Address
-                </label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium mb-1.5 text-gray-700">
-                  I am a...
-                </label>
-                <Select value={formData.role} onValueChange={handleRoleChange} disabled={loading}>
-                  <SelectTrigger id="role" className="rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="parent">Parent</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-gray-700">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Create a strong password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="rounded-lg"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Must be at least 6 characters long
+            {success ? (
+              <div className="space-y-4 text-center">
+                <div className="flex justify-center">
+                  <CheckCircle className="h-16 w-16 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Registration Successful!</h3>
+                {role === 'student' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-700 mb-2">
+                      Your account has been created and is pending admin approval.
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      You'll receive an email when your account is approved. After that, you can log in with your email and password.
+                    </p>
+                  </div>
+                )}
+                <p className="text-sm text-gray-600">
+                  Redirecting to login page...
                 </p>
               </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5 text-gray-700">
-                  Confirm Password
-                </label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                  className="rounded-lg"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-11 text-white font-semibold rounded-lg bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 mt-6"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  'Create Account'
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
                 )}
-              </Button>
-            </form>
 
-            {/* Links */}
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium mb-1.5 text-gray-700">
+                    I am a...
+                  </label>
+                  <Select value={role} onValueChange={setRole} disabled={loading}>
+                    <SelectTrigger id="role" className="rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="student">Student</SelectItem>
+                      <SelectItem value="teacher">Teacher</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {role === 'student' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="first_name" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          First Name
+                        </label>
+                        <Input
+                          id="first_name"
+                          name="first_name"
+                          placeholder="First name"
+                          value={formData.first_name}
+                          onChange={handleChange}
+                          required
+                          disabled={loading}
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="last_name" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Last Name
+                        </label>
+                        <Input
+                          id="last_name"
+                          name="last_name"
+                          placeholder="Last name"
+                          value={formData.last_name}
+                          onChange={handleChange}
+                          required
+                          disabled={loading}
+                          className="rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Email Address
+                      </label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="gender" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Gender
+                        </label>
+                        <Select value={formData.gender} onValueChange={(v) => handleSelectChange('gender', v)} disabled={loading}>
+                          <SelectTrigger id="gender" className="rounded-lg">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label htmlFor="phone" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Phone Number
+                        </label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          placeholder="08012345678"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          disabled={loading}
+                          className="rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="dateOfBirth" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Date of Birth
+                      </label>
+                      <Input
+                        id="dateOfBirth"
+                        name="dateOfBirth"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="class" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Class
+                        </label>
+                        <Select value={formData.class} onValueChange={(v) => handleSelectChange('class', v)} disabled={loading}>
+                          <SelectTrigger id="class" className="rounded-lg">
+                            <SelectValue placeholder="Select class" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="JSS1">JSS1</SelectItem>
+                            <SelectItem value="JSS2">JSS2</SelectItem>
+                            <SelectItem value="JSS3">JSS3</SelectItem>
+                            <SelectItem value="SS1">SS1</SelectItem>
+                            <SelectItem value="SS2">SS2</SelectItem>
+                            <SelectItem value="SS3">SS3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label htmlFor="section" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Section
+                        </label>
+                        <Select value={formData.section} onValueChange={(v) => handleSelectChange('section', v)} disabled={loading}>
+                          <SelectTrigger id="section" className="rounded-lg">
+                            <SelectValue placeholder="Select section" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A">A</SelectItem>
+                            <SelectItem value="B">B</SelectItem>
+                            <SelectItem value="C">C</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Address
+                      </label>
+                      <Input
+                        id="address"
+                        name="address"
+                        placeholder="Your residential address"
+                        value={formData.address}
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="guardianName" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Guardian Name
+                      </label>
+                      <Input
+                        id="guardianName"
+                        name="guardianName"
+                        placeholder="Parent or guardian full name"
+                        value={formData.guardianName}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="guardianPhone" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Guardian Phone
+                        </label>
+                        <Input
+                          id="guardianPhone"
+                          name="guardianPhone"
+                          placeholder="08012345678"
+                          value={formData.guardianPhone}
+                          onChange={handleChange}
+                          disabled={loading}
+                          className="rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="guardianEmail" className="block text-sm font-medium mb-1.5 text-gray-700">
+                          Guardian Email
+                        </label>
+                        <Input
+                          id="guardianEmail"
+                          name="guardianEmail"
+                          type="email"
+                          placeholder="guardian@example.com"
+                          value={formData.guardianEmail}
+                          onChange={handleChange}
+                          disabled={loading}
+                          className="rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {role !== 'student' && (
+                  <>
+                    <div>
+                      <label htmlFor="first_name" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Full Name
+                      </label>
+                      <Input
+                        id="first_name"
+                        name="first_name"
+                        placeholder="Enter your full name"
+                        value={formData.first_name}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Email Address
+                      </label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-1.5 text-gray-700">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Create a strong password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                    className="rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Must be at least 6 characters long
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5 text-gray-700">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                    className="rounded-lg"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-white font-semibold rounded-lg bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 mt-6"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create Account'
+                  )}
+                </Button>
+              </form>
+            )}
+
             <div className="mt-6 text-center text-sm">
-              <p className="text-gray-600 mb-3">
+              <p className="text-gray-600">
                 Already have an account?{' '}
                 <Link href="/auth/login" className="text-primary-600 hover:text-primary-700 font-medium">
                   Sign in here
@@ -325,7 +631,6 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
         <div className="text-center mt-8 text-xs text-gray-600">
           <p>Powered by Next.js 15 • Cloud Technology</p>
           <p className="mt-1">© 2025 El Bethel Academy. All rights reserved.</p>

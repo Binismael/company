@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'sonner'
 import {
@@ -12,8 +11,8 @@ import {
   X,
   Loader2,
   AlertTriangle,
-  Download,
   Eye,
+  Mail,
 } from 'lucide-react'
 
 interface PendingStudent {
@@ -21,23 +20,17 @@ interface PendingStudent {
   user_id: string
   first_name: string
   last_name: string
-  email: string
-  gender: string
-  date_of_birth: string
-  phone: string
-  address: string
-  state: string
-  lga: string
+  email?: string
+  phone?: string
+  gender?: string
+  class: string
+  section: string
   guardian_name: string
   guardian_phone: string
-  guardian_email: string
-  guardian_relationship: string
-  previous_school?: string
-  photo_url?: string
-  birth_certificate_url?: string
-  id_proof_url?: string
+  guardian_email?: string
+  reg_number?: string
   created_at: string
-  class_id?: string
+  approved: boolean
 }
 
 export default function PendingStudentsPage() {
@@ -55,7 +48,22 @@ export default function PendingStudentsPage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('students')
-        .select('*')
+        .select(`
+          id,
+          user_id,
+          first_name,
+          last_name,
+          phone,
+          gender,
+          class,
+          section,
+          guardian_name,
+          guardian_phone,
+          guardian_email,
+          reg_number,
+          created_at,
+          approved
+        `)
         .eq('approved', false)
         .order('created_at', { ascending: false })
 
@@ -65,7 +73,27 @@ export default function PendingStudentsPage() {
         return
       }
 
-      setStudents(data || [])
+      // Fetch emails from users table
+      if (data && data.length > 0) {
+        const userIds = data.map(s => s.user_id)
+        const { data: users, error: userError } = await supabase
+          .from('users')
+          .select('id, email')
+          .in('id', userIds)
+
+        if (!userError && users) {
+          const userMap = new Map(users.map(u => [u.id, u.email]))
+          const enrichedData = data.map(student => ({
+            ...student,
+            email: userMap.get(student.user_id) || 'N/A'
+          }))
+          setStudents(enrichedData)
+        } else {
+          setStudents(data)
+        }
+      } else {
+        setStudents(data || [])
+      }
     } catch (error) {
       console.error('Error fetching students:', error)
       toast.error('An error occurred')
@@ -88,6 +116,20 @@ export default function PendingStudentsPage() {
         return
       }
 
+      // Log approval
+      const student = students.find(s => s.id === studentId)
+      if (student) {
+        const { data: { user } } = await supabase.auth.getUser()
+        await supabase
+          .from('student_approval_logs')
+          .insert([{
+            student_id: studentId,
+            admin_user_id: user?.id,
+            action: 'approved',
+            note: 'Approved by admin'
+          }])
+      }
+
       setStudents((prev) => prev.filter((s) => s.id !== studentId))
       toast.success('Student approved successfully')
     } catch (error) {
@@ -99,16 +141,30 @@ export default function PendingStudentsPage() {
   }
 
   const rejectStudent = async (studentId: string) => {
-    if (!confirm('Are you sure you want to reject this registration? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to reject this registration? The student will need to re-register.')) {
       return
     }
 
     try {
       setApproving((prev) => ({ ...prev, [studentId]: true }))
 
+      // Log rejection
+      const student = students.find(s => s.id === studentId)
+      if (student) {
+        const { data: { user } } = await supabase.auth.getUser()
+        await supabase
+          .from('student_approval_logs')
+          .insert([{
+            student_id: studentId,
+            admin_user_id: user?.id,
+            action: 'rejected',
+            note: 'Rejected by admin'
+          }])
+      }
+
       const { error } = await supabase
         .from('students')
-        .delete()
+        .update({ approved: false })
         .eq('id', studentId)
 
       if (error) {
@@ -117,7 +173,7 @@ export default function PendingStudentsPage() {
       }
 
       setStudents((prev) => prev.filter((s) => s.id !== studentId))
-      toast.success('Student registration rejected')
+      toast.success('Student registration marked as rejected')
     } catch (error) {
       console.error('Error rejecting student:', error)
       toast.error('An error occurred')
@@ -153,43 +209,43 @@ export default function PendingStudentsPage() {
             <h3 className="font-semibold mb-3">Personal Information</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-600">Gender</p>
-                <p className="font-medium">{student.gender}</p>
+                <p className="text-gray-600">First Name</p>
+                <p className="font-medium">{student.first_name}</p>
               </div>
               <div>
-                <p className="text-gray-600">Date of Birth</p>
-                <p className="font-medium">
-                  {new Date(student.date_of_birth).toLocaleDateString()}
-                </p>
+                <p className="text-gray-600">Last Name</p>
+                <p className="font-medium">{student.last_name}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Gender</p>
+                <p className="font-medium">{student.gender || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-gray-600">Phone</p>
-                <p className="font-medium">{student.phone}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Email</p>
-                <p className="font-medium">{student.email}</p>
+                <p className="font-medium">{student.phone || 'N/A'}</p>
               </div>
             </div>
           </div>
 
-          {/* Contact Info */}
+          {/* Academic Info */}
           <div>
-            <h3 className="font-semibold mb-3">Contact Information</h3>
-            <div className="grid grid-cols-1 gap-4 text-sm">
+            <h3 className="font-semibold mb-3">Academic Information</h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-600">Address</p>
-                <p className="font-medium">{student.address}</p>
+                <p className="text-gray-600">Class</p>
+                <p className="font-medium">{student.class}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600">State</p>
-                  <p className="font-medium">{student.state}</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">LGA</p>
-                  <p className="font-medium">{student.lga}</p>
-                </div>
+              <div>
+                <p className="text-gray-600">Section</p>
+                <p className="font-medium">{student.section}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Registration Number</p>
+                <p className="font-medium">{student.reg_number || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Email</p>
+                <p className="font-medium">{student.email}</p>
               </div>
             </div>
           </div>
@@ -209,70 +265,11 @@ export default function PendingStudentsPage() {
                 </div>
                 <div>
                   <p className="text-gray-600">Email</p>
-                  <p className="font-medium">{student.guardian_email}</p>
+                  <p className="font-medium">{student.guardian_email || 'N/A'}</p>
                 </div>
-              </div>
-              <div>
-                <p className="text-gray-600">Relationship</p>
-                <p className="font-medium">{student.guardian_relationship}</p>
               </div>
             </div>
           </div>
-
-          {/* Academic Info */}
-          <div>
-            <h3 className="font-semibold mb-3">Academic Information</h3>
-            <div className="grid grid-cols-1 gap-4 text-sm">
-              {student.previous_school && (
-                <div>
-                  <p className="text-gray-600">Previous School</p>
-                  <p className="font-medium">{student.previous_school}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Documents */}
-          {(student.photo_url || student.birth_certificate_url || student.id_proof_url) && (
-            <div>
-              <h3 className="font-semibold mb-3">Uploaded Documents</h3>
-              <div className="space-y-2">
-                {student.photo_url && (
-                  <a
-                    href={student.photo_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded bg-gray-100 hover:bg-gray-200 transition"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-sm">Passport Photo</span>
-                  </a>
-                )}
-                {student.birth_certificate_url && (
-                  <a
-                    href={student.birth_certificate_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded bg-gray-100 hover:bg-gray-200 transition"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-sm">Birth Certificate</span>
-                  </a>
-                )}
-                {student.id_proof_url && (
-                  <a
-                    href={student.id_proof_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-2 rounded bg-gray-100 hover:bg-gray-200 transition"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-sm">ID Proof</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Timestamp */}
           <div className="text-sm text-gray-600 border-t pt-4">
@@ -284,7 +281,7 @@ export default function PendingStudentsPage() {
             <Button
               onClick={() => approveStudent(student.id)}
               disabled={approving[student.id]}
-              className="flex-1"
+              className="flex-1 bg-green-600 hover:bg-green-700"
             >
               {approving[student.id] ? (
                 <>
@@ -359,8 +356,7 @@ export default function PendingStudentsPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Action Required</AlertTitle>
             <AlertDescription>
-              Please review and approve student registrations. Students will be notified of approval
-              status via email.
+              Please review and approve student registrations. Students will be unable to access their portal until approval.
             </AlertDescription>
           </Alert>
         )}
@@ -391,18 +387,22 @@ export default function PendingStudentsPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4 text-sm">
                         <div>
-                          <p className="text-gray-600">Gender</p>
-                          <p className="font-medium">{student.gender}</p>
+                          <p className="text-gray-600">Class</p>
+                          <p className="font-medium">{student.class}{student.section}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Phone</p>
-                          <p className="font-medium">{student.phone}</p>
+                          <p className="font-medium">{student.phone || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Guardian</p>
                           <p className="font-medium">{student.guardian_name}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Reg. Number</p>
+                          <p className="font-medium text-xs">{student.reg_number || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-gray-600">Registered</p>
@@ -426,6 +426,7 @@ export default function PendingStudentsPage() {
                         onClick={() => approveStudent(student.id)}
                         disabled={approving[student.id]}
                         size="sm"
+                        className="bg-green-600 hover:bg-green-700"
                       >
                         {approving[student.id] ? (
                           <Loader2 className="w-4 h-4 animate-spin" />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -23,9 +23,12 @@ import {
   Home,
   Sparkles,
   X,
+  Loader2,
+  Clock,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 import { toast } from 'sonner'
+import { useStudentApprovalGuard } from '@/hooks/use-student-approval-guard'
 
 interface NavItem {
   label: string
@@ -41,6 +44,7 @@ export default function StudentPortalLayout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
+  const { isLoading: approvalLoading, isApproved } = useStudentApprovalGuard()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
 
@@ -147,6 +151,26 @@ export default function StudentPortalLayout({
       ))}
     </nav>
   )
+
+  if (approvalLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    )
+  }
+
+  if (!isApproved) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Clock className="h-12 w-12 text-orange-600 mx-auto mb-4 animate-pulse" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Account Pending Approval</h2>
+          <p className="text-gray-600 mb-4">Redirecting you to the pending approval page...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
