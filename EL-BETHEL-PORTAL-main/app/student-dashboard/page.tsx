@@ -166,10 +166,30 @@ export default function StudentDashboard() {
     }
   }
 
-  if (loading) {
+  if (approvalLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
         <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    )
+  }
+
+  if (!isApproved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Clock className="w-8 h-8 text-orange-600 animate-pulse" />
+              </div>
+            </div>
+            <CardTitle className="text-xl">Account Pending Approval</CardTitle>
+            <CardDescription>
+              Your account is awaiting admin approval. You will be redirected to the pending approval page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
