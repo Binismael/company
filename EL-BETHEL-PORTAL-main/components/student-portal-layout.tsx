@@ -151,6 +151,26 @@ export default function StudentPortalLayout({
     </nav>
   )
 
+  if (approvalLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    )
+  }
+
+  if (!isApproved) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Clock className="h-12 w-12 text-orange-600 mx-auto mb-4 animate-pulse" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Account Pending Approval</h2>
+          <p className="text-gray-600 mb-4">Redirecting you to the pending approval page...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
