@@ -177,6 +177,52 @@ export default function LandingPage() {
           </div>
         </div>
 
+        {/* Academic Structure */}
+        <div className="mb-20">
+          <h3 className="text-3xl font-bold text-center mb-4">
+            Our Academic Structure
+          </h3>
+          <p className="text-xl text-gray-600 text-center max-w-3xl mx-auto mb-12">
+            Our comprehensive curriculum covers Junior Secondary (JSS1–JSS3) and Senior Secondary (SS1–SS3) levels, preparing students with a strong foundation in academics, leadership, and technology.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Junior Secondary School</CardTitle>
+                <CardDescription>Grades 7-9</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {['JSS1', 'JSS2', 'JSS3'].map((level) => (
+                    <li key={level} className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-blue-600" />
+                      <span className="font-medium text-gray-700">{level}</span>
+                      <span className="text-sm text-gray-500">Foundation & Exploration</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Senior Secondary School</CardTitle>
+                <CardDescription>Grades 10-12</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {['SS1', 'SS2', 'SS3'].map((level) => (
+                    <li key={level} className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-green-600" />
+                      <span className="font-medium text-gray-700">{level}</span>
+                      <span className="text-sm text-gray-500">Specialization & Excellence</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Role Selection */}
         <div className="mb-20">
           <h3 className="text-3xl font-bold text-center mb-12">
