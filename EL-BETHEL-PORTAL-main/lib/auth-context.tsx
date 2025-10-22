@@ -118,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userData = data[0]
 
       let additionalData: any = {}
+      let studentApproved: boolean | undefined
 
       if (userData.role === "student") {
         const { data: studentDataArray, error: studentError } = await supabase
@@ -136,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             admissionNumber: studentData.admission_number,
             class: studentData.class_id,
           }
+          studentApproved = Boolean(studentData.approved)
         }
       } else if (userData.role === "teacher") {
         const { data: teacherDataArray, error: teacherError } = await supabase
@@ -156,13 +158,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      const isApproved = userData.role !== "student" ? true : Boolean(studentApproved)
+
       return {
         uid: userData.id,
         email: userData.email,
         role: userData.role,
         fullName: userData.full_name,
         phoneNumber: userData.phone_number,
-        isApproved: userData.is_approved,
+        isApproved,
         createdAt: userData.created_at,
         lastLogin: userData.last_login,
         ...additionalData,
@@ -193,7 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: additionalData?.fullName || email,
           role,
           phone_number: additionalData?.phoneNumber,
-          is_approved: role === "admin",
         },
       ])
 
