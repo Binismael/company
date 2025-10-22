@@ -24,15 +24,26 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Form submitted, loginType:', loginType, 'email:', email, 'regNumber:', regNumber)
     setError('')
     setLoading(true)
 
     try {
       let loginEmail = email
 
-      if (loginType === 'reg-number') {
+      if (loginType === 'email') {
+        if (!email.trim()) {
+          throw new Error('Email address is required')
+        }
+        if (!password.trim()) {
+          throw new Error('Password is required')
+        }
+      } else if (loginType === 'reg-number') {
         if (!regNumber.trim()) {
           throw new Error('Registration number is required')
+        }
+        if (!password.trim()) {
+          throw new Error('Password is required')
         }
 
         const student = await findStudentByRegNumber(regNumber)
@@ -40,17 +51,16 @@ export default function LoginPage() {
           throw new Error('Registration number not found')
         }
 
-        const { data: userData, error: userError } = await supabase
+        const { data: userDataArray, error: userError } = await supabase
           .from('users')
           .select('email')
           .eq('id', student.user_id)
-          .single()
 
-        if (userError || !userData) {
+        if (userError || !userDataArray || userDataArray.length === 0) {
           throw new Error('User account not found for this registration number')
         }
 
-        loginEmail = userData.email
+        loginEmail = userDataArray[0].email
       }
 
       const { data: authData, error: authError } =
@@ -62,13 +72,22 @@ export default function LoginPage() {
       if (authError) throw new Error(authError.message)
 
       if (authData.user) {
-        const { data: userData, error: userError } = await supabase
+        const { data: userDataArray, error: userError } = await supabase
           .from('users')
           .select('*')
           .eq('id', authData.user.id)
-          .single()
 
-        if (userError) throw new Error('User not found')
+        if (userError) {
+          console.error('Database error fetching user:', userError)
+          throw new Error('Failed to fetch user profile: ' + userError.message)
+        }
+
+        if (!userDataArray || userDataArray.length === 0) {
+          console.error('No user record found for auth user ID:', authData.user.id)
+          throw new Error('User account not found in the system. Please contact your administrator to create your account.')
+        }
+
+        const userData = userDataArray[0]
 
         sessionStorage.setItem('user', JSON.stringify(userData))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
@@ -84,7 +103,9 @@ export default function LoginPage() {
         router.push(roleRoutes[userData.role] || '/student-dashboard')
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed')
+      const errorMessage = err.message || 'Login failed'
+      console.error('Login error:', errorMessage, err)
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -220,7 +241,6 @@ export default function LoginPage() {
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
@@ -236,7 +256,6 @@ export default function LoginPage() {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
@@ -277,7 +296,6 @@ export default function LoginPage() {
                       placeholder="ELBA/25/SS3B/001"
                       value={regNumber}
                       onChange={(e) => setRegNumber(e.target.value.toUpperCase())}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
@@ -296,7 +314,6 @@ export default function LoginPage() {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      required
                       disabled={loading}
                       className="rounded-lg"
                     />
@@ -349,13 +366,8 @@ export default function LoginPage() {
 
             {/* Links */}
             <div className="space-y-2 text-sm text-center">
-              <p>
-                <Link
-                  href="/auth/register"
-                  className="text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Don't have an account? Register
-                </Link>
+              <p className="text-gray-500">
+                Admin-managed accounts only. Contact your administrator to create an account.
               </p>
               <p>
                 <Link

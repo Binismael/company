@@ -104,34 +104,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("users")
         .select("*")
         .eq("id", userId)
-        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error("Error fetching user from users table:", error.message)
+        throw error
+      }
+
+      if (!data || data.length === 0) {
+        console.warn("No user data found for userId:", userId)
+        return null
+      }
+
+      const userData = data[0]
 
       let additionalData: any = {}
 
-      if (data.role === "student") {
-        const { data: studentData } = await supabase
+      if (userData.role === "student") {
+        const { data: studentDataArray, error: studentError } = await supabase
           .from("students")
           .select("*")
           .eq("user_id", userId)
-          .single()
 
-        if (studentData) {
+        if (studentError) {
+          console.warn("Error fetching student data:", studentError.message)
+        }
+
+        if (studentDataArray && studentDataArray.length > 0) {
+          const studentData = studentDataArray[0]
           additionalData = {
             regNo: studentData.reg_number,
             admissionNumber: studentData.admission_number,
             class: studentData.class_id,
           }
         }
-      } else if (data.role === "teacher") {
-        const { data: teacherData } = await supabase
+      } else if (userData.role === "teacher") {
+        const { data: teacherDataArray, error: teacherError } = await supabase
           .from("teachers")
           .select("*")
           .eq("user_id", userId)
-          .single()
 
-        if (teacherData) {
+        if (teacherError) {
+          console.warn("Error fetching teacher data:", teacherError.message)
+        }
+
+        if (teacherDataArray && teacherDataArray.length > 0) {
+          const teacherData = teacherDataArray[0]
           additionalData = {
             teacherCode: teacherData.teacher_code,
             department: teacherData.department,
@@ -140,18 +157,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       return {
-        uid: data.id,
-        email: data.email,
-        role: data.role,
-        fullName: data.full_name,
-        phoneNumber: data.phone_number,
-        isApproved: data.is_approved,
-        createdAt: data.created_at,
-        lastLogin: data.last_login,
+        uid: userData.id,
+        email: userData.email,
+        role: userData.role,
+        fullName: userData.full_name,
+        phoneNumber: userData.phone_number,
+        isApproved: userData.is_approved,
+        createdAt: userData.created_at,
+        lastLogin: userData.last_login,
         ...additionalData,
       }
-    } catch (error) {
-      console.error("Error fetching user profile:", error)
+    } catch (error: any) {
+      const errorMessage = error?.message || JSON.stringify(error)
+      console.error("Error fetching user profile:", errorMessage)
       return null
     }
   }
