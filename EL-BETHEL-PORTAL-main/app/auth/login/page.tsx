@@ -97,7 +97,9 @@ export default function LoginPage() {
         router.push(roleRoutes[userData.role] || '/student-dashboard')
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed')
+      const errorMessage = err.message || 'Login failed'
+      console.error('Login error:', errorMessage, err)
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
