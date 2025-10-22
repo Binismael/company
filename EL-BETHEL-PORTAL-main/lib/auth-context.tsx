@@ -106,16 +106,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", userId)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error("Error fetching user from users table:", error.message)
+        throw error
+      }
+
+      if (!data) {
+        console.warn("No user data found for userId:", userId)
+        return null
+      }
 
       let additionalData: any = {}
 
       if (data.role === "student") {
-        const { data: studentData } = await supabase
+        const { data: studentData, error: studentError } = await supabase
           .from("students")
           .select("*")
           .eq("user_id", userId)
           .single()
+
+        if (studentError) {
+          console.warn("Error fetching student data:", studentError.message)
+        }
 
         if (studentData) {
           additionalData = {
@@ -125,11 +137,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else if (data.role === "teacher") {
-        const { data: teacherData } = await supabase
+        const { data: teacherData, error: teacherError } = await supabase
           .from("teachers")
           .select("*")
           .eq("user_id", userId)
           .single()
+
+        if (teacherError) {
+          console.warn("Error fetching teacher data:", teacherError.message)
+        }
 
         if (teacherData) {
           additionalData = {
@@ -150,8 +166,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastLogin: data.last_login,
         ...additionalData,
       }
-    } catch (error) {
-      console.error("Error fetching user profile:", error)
+    } catch (error: any) {
+      const errorMessage = error?.message || JSON.stringify(error)
+      console.error("Error fetching user profile:", errorMessage)
       return null
     }
   }
