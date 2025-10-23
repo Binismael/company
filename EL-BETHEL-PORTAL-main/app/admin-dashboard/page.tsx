@@ -543,7 +543,9 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Fee Collection</p>
                 <p className="text-2xl font-bold text-orange-600">
-                  {((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)}%
+                  {(stats.feesCollected + stats.outstandingFees) > 0
+                    ? ((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)
+                    : '0'}%
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-orange-500" />
@@ -552,7 +554,9 @@ export default function AdminDashboard() {
               <div
                 className="bg-orange-500 h-2 rounded-full"
                 style={{
-                  width: `${((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)}%`,
+                  width: `${(stats.feesCollected + stats.outstandingFees) > 0
+                    ? ((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)
+                    : '0'}%`,
                 }}
               ></div>
             </div>
