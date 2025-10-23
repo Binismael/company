@@ -314,6 +314,7 @@ export default function RegisterPage() {
                       <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="teacher">Teacher</SelectItem>
                       <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -518,7 +519,44 @@ export default function RegisterPage() {
                   </>
                 )}
 
-                {role !== 'student' && (
+                {role === 'admin' && (
+                  <>
+                    <div>
+                      <label htmlFor="first_name" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Full Name
+                      </label>
+                      <Input
+                        id="first_name"
+                        name="first_name"
+                        placeholder="Enter your full name"
+                        value={formData.first_name}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Email Address
+                      </label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(role === 'teacher' || role === 'parent') && (
                   <>
                     <div>
                       <label htmlFor="first_name" className="block text-sm font-medium mb-1.5 text-gray-700">
