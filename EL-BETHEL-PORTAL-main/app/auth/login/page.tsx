@@ -57,7 +57,7 @@ export default function LoginPage() {
         const { data: userDataArray, error: userError } = await supabase
           .from('users')
           .select('email')
-          .eq('auth_id', student.user_id)
+          .eq('id', student.user_id)
 
         if (userError || !userDataArray || userDataArray.length === 0) {
           throw new Error('User account not found for this registration number')
@@ -78,7 +78,7 @@ export default function LoginPage() {
         const { data: userDataArray, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('auth_id', authData.user.id)
+          .eq('id', authData.user.id)
 
         if (userError) {
           console.error('Database error fetching user:', userError)
