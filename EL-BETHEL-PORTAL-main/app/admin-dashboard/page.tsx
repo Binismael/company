@@ -7,8 +7,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase-client'
-import { Loader2, ArrowLeft, LogOut, Home, Settings } from 'lucide-react'
+import { Loader2, ArrowLeft, LogOut, Home, Settings, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { AdminSidebar } from '@/components/admin-sidebar'
 import {
   BarChart,
   Bar,
