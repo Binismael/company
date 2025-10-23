@@ -78,7 +78,7 @@ export default function LoginPage() {
         const { data: userDataArray, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', authData.user.id)
+          .eq('auth_id', authData.user.id)
 
         if (userError) {
           console.error('Database error fetching user:', userError)
