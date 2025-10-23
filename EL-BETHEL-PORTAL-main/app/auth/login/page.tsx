@@ -92,28 +92,6 @@ export default function LoginPage() {
 
         const userData = userDataArray[0]
 
-        // Check if student is approved (if role is student)
-        if (userData.role === 'student') {
-          const { data: studentData, error: studentError } = await supabase
-            .from('students')
-            .select('approved')
-            .eq('user_id', authData.user.id)
-            .single()
-
-          if (studentError) {
-            console.error('Error checking student approval status:', studentError)
-            throw new Error('Failed to verify account status')
-          }
-
-          if (!studentData?.approved) {
-            // Sign them out immediately
-            await supabase.auth.signOut()
-            throw new Error(
-              'Your account is pending admin approval. Please check your email for updates. Contact your school administrator if you have questions.'
-            )
-          }
-        }
-
         sessionStorage.setItem('user', JSON.stringify(userData))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
 
@@ -391,8 +369,13 @@ export default function LoginPage() {
 
             {/* Links */}
             <div className="space-y-2 text-sm text-center">
-              <p className="text-gray-500">
-                Admin-managed accounts only. Contact your administrator to create an account.
+              <p>
+                <Link
+                  href="/auth/register"
+                  className="text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Create an account
+                </Link>
               </p>
               <p>
                 <Link
