@@ -124,7 +124,7 @@ export default function RegisterPage() {
       // Create user record
       const { error: userError } = await supabase.from('users').insert([
         {
-          auth_id: userId,
+          id: userId,
           email: formData.email,
           full_name: role === 'student' ? `${formData.first_name} ${formData.last_name}` : formData.first_name,
           role,
