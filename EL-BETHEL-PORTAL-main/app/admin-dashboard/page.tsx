@@ -431,26 +431,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 pb-8">
-      {/* Header with Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.back()}
-          className="gap-2 hover:bg-gray-100"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-      </div>
-
-      {/* Main Header with Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your school.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your school.</p>
+            </div>
+            <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -465,13 +452,13 @@ export default function AdminDashboard() {
             <Download className="w-4 h-4" />
             Export
           </Button>
-        </div>
-      </div>
+            </div>
+          </div>
 
-      {/* Time Range Selector */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm font-medium text-gray-700">Filter by:</span>
-        <div className="flex flex-wrap gap-2">
+          {/* Time Range Selector */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm font-medium text-gray-700">Filter by:</span>
+            <div className="flex flex-wrap gap-2">
           {['today', 'week', 'month', 'year'].map((range) => (
             <Button
               key={range}
@@ -482,12 +469,12 @@ export default function AdminDashboard() {
             >
               {range}
             </Button>
-          ))}
-        </div>
-      </div>
+            ))}
+            </div>
+          </div>
 
-      {/* Quick Stats with Trends */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Quick Stats with Trends */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Users}
           label="Total Students"
