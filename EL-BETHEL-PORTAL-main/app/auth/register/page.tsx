@@ -128,7 +128,6 @@ export default function RegisterPage() {
           email: formData.email,
           full_name: role === 'student' ? `${formData.first_name} ${formData.last_name}` : formData.first_name,
           role,
-          is_approved: true,
         },
       ])
 
