@@ -118,34 +118,64 @@ export default function CreateStudentPage() {
 
     setLoading(true)
     try {
-      // Generate registration number
-      const regNum = await generateRegNumber()
-      setGeneratedRegNumber(regNum)
+      if (selectedRole === 'student') {
+        // Generate registration number for students
+        const regNum = await generateRegNumber()
+        setGeneratedRegNumber(regNum)
 
-      // Create student
-      const result = await createStudent(
-        formData.email,
-        formData.password,
-        formData.firstName,
-        formData.lastName,
-        formData.gender,
-        formData.dateOfBirth,
-        formData.classId,
-        formData.guardianName,
-        formData.guardianPhone,
-        formData.guardianEmail || '',
-        formData.address || '',
-        formData.session
-      )
+        // Create student
+        const result = await createStudent(
+          formData.email,
+          formData.password,
+          formData.firstName,
+          formData.lastName,
+          formData.gender,
+          formData.dateOfBirth,
+          formData.classId,
+          formData.guardianName,
+          formData.guardianPhone,
+          formData.guardianEmail || '',
+          formData.address || '',
+          formData.session
+        )
 
-      setSuccessData({
-        ...result.data,
-        regNumber: regNum,
-        fullName: `${formData.firstName} ${formData.lastName}`,
-      })
+        setSuccessData({
+          ...result.data,
+          regNumber: regNum,
+          fullName: `${formData.firstName} ${formData.lastName}`,
+        })
+
+        toast.success('Student created successfully!')
+      } else {
+        // Create teacher or admin
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        })
+
+        if (error) throw error
+        if (!data.user) throw new Error('Failed to create auth user')
+
+        // Create user profile
+        const { error: profileError } = await supabase.from('users').insert({
+          auth_id: data.user.id,
+          email: formData.email,
+          full_name: `${formData.firstName} ${formData.lastName}`,
+          role: selectedRole,
+        })
+
+        if (profileError) throw profileError
+
+        setSuccessData({
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          role: selectedRole,
+        })
+
+        toast.success(`${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} created successfully!`)
+      }
 
       setShowSuccess(true)
-      toast.success('Student created successfully!')
 
       // Reset form
       setFormData({
@@ -164,7 +194,7 @@ export default function CreateStudentPage() {
         session: '2024/2025',
       })
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create student')
+      toast.error(error.message || `Failed to create ${selectedRole}`)
       setShowSuccess(false)
     } finally {
       setLoading(false)
