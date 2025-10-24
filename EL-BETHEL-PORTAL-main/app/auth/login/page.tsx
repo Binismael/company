@@ -75,39 +75,20 @@ export default function LoginPage() {
       if (authError) throw new Error(authError.message)
 
       if (authData.user) {
-        let { data: userDataArray, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('*')
+          .select('id, auth_id, email, full_name, role, created_at')
           .eq('auth_id', authData.user.id)
+          .single()
 
-        if (userError) {
+        if (userError && userError.code !== 'PGRST116') {
           console.error('Database error fetching user:', userError)
           throw new Error('Failed to fetch user profile: ' + userError.message)
         }
 
-        // If no profile found, auto-create one
-        if (!userDataArray || userDataArray.length === 0) {
-          console.warn('No user record found for auth user ID:', authData.user.id, 'Auto-creating profile...')
-
-          const { data: newUser, error: createError } = await supabase
-            .from('users')
-            .insert({
-              auth_id: authData.user.id,
-              email: authData.user.email,
-              full_name: authData.user.email?.split('@')[0] || 'User',
-              role: 'student',
-            })
-            .select()
-
-          if (createError || !newUser || newUser.length === 0) {
-            console.error('Failed to auto-create user profile:', createError)
-            throw new Error('Failed to create user account. Please contact your administrator.')
-          }
-
-          userDataArray = newUser
+        if (!userData) {
+          throw new Error('User account not found in the system. Please contact your administrator to create your account.')
         }
-
-        const userData = userDataArray[0]
 
         sessionStorage.setItem('user', JSON.stringify(userData))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
