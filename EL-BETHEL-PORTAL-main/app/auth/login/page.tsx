@@ -90,7 +90,13 @@ export default function LoginPage() {
           throw new Error('User account not found in the system. Please contact your administrator to create your account.')
         }
 
-        sessionStorage.setItem('user', JSON.stringify(userData))
+        sessionStorage.setItem('user', JSON.stringify({
+          id: userData.id,
+          auth_id: userData.auth_id,
+          email: userData.email,
+          full_name: userData.full_name,
+          role: userData.role,
+        }))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
 
         const roleRoutes: Record<string, string> = {
