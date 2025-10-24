@@ -51,9 +51,11 @@ export default function CreateStudentPage() {
     const loadClasses = async () => {
       try {
         const classesData = await getAllClasses()
+        console.log('Classes loaded:', classesData)
         setClasses(classesData || [])
       } catch (error: any) {
-        toast.error('Failed to load classes')
+        console.error('Error loading classes:', error)
+        toast.error('Failed to load classes: ' + error.message)
       } finally {
         setClassesLoading(false)
       }
