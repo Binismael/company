@@ -244,21 +244,41 @@ export default function CreateStudentPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Create Student</h1>
-        <p className="text-gray-600 mt-2">Register a new student in the system</p>
+        <h1 className="text-3xl font-bold text-gray-900">Create User Account</h1>
+        <p className="text-gray-600 mt-2">Register a new student, teacher, or admin in the system</p>
+      </div>
+
+      {/* Role Selector */}
+      <div className="flex gap-2">
+        {(['student', 'teacher', 'admin'] as const).map((role) => (
+          <Button
+            key={role}
+            variant={selectedRole === role ? 'default' : 'outline'}
+            onClick={() => setSelectedRole(role)}
+            className="capitalize"
+          >
+            {role === 'admin' ? 'Admin' : role === 'teacher' ? 'Teacher' : 'Student'}
+          </Button>
+        ))}
       </div>
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Registration number will be auto-generated based on the class selected. Format: ELBA/YY/CLASS/###
+          {selectedRole === 'student'
+            ? 'Registration number will be auto-generated based on the class selected. Format: ELBA/YY/CLASS/###'
+            : `${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} account will be created with full access.`}
         </AlertDescription>
       </Alert>
 
       <Card>
         <CardHeader>
-          <CardTitle>Student Information</CardTitle>
-          <CardDescription>Enter complete student details</CardDescription>
+          <CardTitle className="capitalize">{selectedRole} Information</CardTitle>
+          <CardDescription>
+            {selectedRole === 'student'
+              ? 'Enter complete student details'
+              : `Enter ${selectedRole} account details`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -472,15 +492,28 @@ export default function CreateStudentPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Password *</label>
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className={`mt-1 ${errors.password ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative mt-1">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className={`pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-xs text-red-600 mt-1">{errors.password}</p>
                   )}
@@ -488,15 +521,28 @@ export default function CreateStudentPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Confirm Password *</label>
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({ ...formData, confirmPassword: e.target.value })
-                    }
-                    className={`mt-1 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative mt-1">
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="••••••"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, confirmPassword: e.target.value })
+                      }
+                      className={`pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.confirmPassword && (
                     <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
                   )}
@@ -514,10 +560,10 @@ export default function CreateStudentPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Student...
+                    Creating {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}...
                   </>
                 ) : (
-                  'Create Student'
+                  `Create ${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}`
                 )}
               </Button>
               <Button
