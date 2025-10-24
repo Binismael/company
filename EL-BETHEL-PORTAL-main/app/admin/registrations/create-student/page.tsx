@@ -74,10 +74,14 @@ export default function CreateStudentPage() {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match'
     }
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
-    if (!formData.classId) newErrors.classId = 'Class selection is required'
-    if (!formData.guardianName.trim()) newErrors.guardianName = 'Guardian name is required'
-    if (!formData.guardianPhone.trim()) newErrors.guardianPhone = 'Guardian phone is required'
+
+    // Only require these for students
+    if (selectedRole === 'student') {
+      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
+      if (!formData.classId) newErrors.classId = 'Class selection is required'
+      if (!formData.guardianName.trim()) newErrors.guardianName = 'Guardian name is required'
+      if (!formData.guardianPhone.trim()) newErrors.guardianPhone = 'Guardian phone is required'
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
