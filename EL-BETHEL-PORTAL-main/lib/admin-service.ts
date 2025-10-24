@@ -212,12 +212,9 @@ export async function suspendUser(userId: string) {
 
 export async function deleteUser(userId: string) {
   try {
-    // Delete from Supabase Auth
-    const { error: authError } = await supabase.auth.admin?.deleteUser(userId)
-
-    if (authError) throw authError
-
     // Delete from users table (cascade will handle related records)
+    // Note: Supabase Auth deletion requires service role key, which is not available on client
+    // Users will be effectively disabled since they won't have a profile in the users table
     const { error: dbError } = await supabase.from("users").delete().eq("id", userId)
 
     if (dbError) throw dbError
