@@ -54,16 +54,17 @@ export default function LoginPage() {
 
         studentId = student.id
 
-        const { data: userDataArray, error: userError } = await supabase
+        const { data: studentUser, error: userError } = await supabase
           .from('users')
           .select('email')
           .eq('auth_id', student.user_id)
+          .single()
 
-        if (userError || !userDataArray || userDataArray.length === 0) {
+        if (userError || !studentUser) {
           throw new Error('User account not found for this registration number')
         }
 
-        loginEmail = userDataArray[0].email
+        loginEmail = studentUser.email
       }
 
       const { data: authData, error: authError } =
