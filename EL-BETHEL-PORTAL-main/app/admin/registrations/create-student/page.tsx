@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader2, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Class {
@@ -25,6 +25,9 @@ export default function CreateStudentPage() {
   const [generatedRegNumber, setGeneratedRegNumber] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
   const [successData, setSuccessData] = useState<any>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin'>('student')
 
   const [formData, setFormData] = useState({
     firstName: '',
