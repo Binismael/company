@@ -31,7 +31,6 @@ export async function createStudent(
         email,
         full_name: `${firstName} ${lastName}`,
         role: "student",
-        is_approved: true,
       },
     ])
 
@@ -101,7 +100,6 @@ export async function createTeacher(
         full_name: fullName,
         role: "teacher",
         phone_number: phoneNumber,
-        is_approved: true,
       },
     ])
 

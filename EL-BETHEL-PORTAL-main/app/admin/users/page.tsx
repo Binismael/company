@@ -32,7 +32,6 @@ interface User {
   created_at: string
   last_login?: string
   phone_number?: string
-  is_approved: boolean
 }
 
 export default function UserManagementPage() {
