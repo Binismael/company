@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader2, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Class {
@@ -25,6 +25,9 @@ export default function CreateStudentPage() {
   const [generatedRegNumber, setGeneratedRegNumber] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
   const [successData, setSuccessData] = useState<any>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin'>('student')
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -48,9 +51,11 @@ export default function CreateStudentPage() {
     const loadClasses = async () => {
       try {
         const classesData = await getAllClasses()
+        console.log('Classes loaded:', classesData)
         setClasses(classesData || [])
       } catch (error: any) {
-        toast.error('Failed to load classes')
+        console.error('Error loading classes:', error)
+        toast.error('Failed to load classes: ' + error.message)
       } finally {
         setClassesLoading(false)
       }
@@ -71,10 +76,14 @@ export default function CreateStudentPage() {
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match'
     }
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
-    if (!formData.classId) newErrors.classId = 'Class selection is required'
-    if (!formData.guardianName.trim()) newErrors.guardianName = 'Guardian name is required'
-    if (!formData.guardianPhone.trim()) newErrors.guardianPhone = 'Guardian phone is required'
+
+    // Only require these for students
+    if (selectedRole === 'student') {
+      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
+      if (!formData.classId) newErrors.classId = 'Class selection is required'
+      if (!formData.guardianName.trim()) newErrors.guardianName = 'Guardian name is required'
+      if (!formData.guardianPhone.trim()) newErrors.guardianPhone = 'Guardian phone is required'
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -111,34 +120,64 @@ export default function CreateStudentPage() {
 
     setLoading(true)
     try {
-      // Generate registration number
-      const regNum = await generateRegNumber()
-      setGeneratedRegNumber(regNum)
+      if (selectedRole === 'student') {
+        // Generate registration number for students
+        const regNum = await generateRegNumber()
+        setGeneratedRegNumber(regNum)
 
-      // Create student
-      const result = await createStudent(
-        formData.email,
-        formData.password,
-        formData.firstName,
-        formData.lastName,
-        formData.gender,
-        formData.dateOfBirth,
-        formData.classId,
-        formData.guardianName,
-        formData.guardianPhone,
-        formData.guardianEmail || '',
-        formData.address || '',
-        formData.session
-      )
+        // Create student
+        const result = await createStudent(
+          formData.email,
+          formData.password,
+          formData.firstName,
+          formData.lastName,
+          formData.gender,
+          formData.dateOfBirth,
+          formData.classId,
+          formData.guardianName,
+          formData.guardianPhone,
+          formData.guardianEmail || '',
+          formData.address || '',
+          formData.session
+        )
 
-      setSuccessData({
-        ...result.data,
-        regNumber: regNum,
-        fullName: `${formData.firstName} ${formData.lastName}`,
-      })
+        setSuccessData({
+          ...result.data,
+          regNumber: regNum,
+          fullName: `${formData.firstName} ${formData.lastName}`,
+        })
+
+        toast.success('Student created successfully!')
+      } else {
+        // Create teacher or admin
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+        })
+
+        if (error) throw error
+        if (!data.user) throw new Error('Failed to create auth user')
+
+        // Create user profile
+        const { error: profileError } = await supabase.from('users').insert({
+          auth_id: data.user.id,
+          email: formData.email,
+          full_name: `${formData.firstName} ${formData.lastName}`,
+          role: selectedRole,
+        })
+
+        if (profileError) throw profileError
+
+        setSuccessData({
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          role: selectedRole,
+        })
+
+        toast.success(`${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} created successfully!`)
+      }
 
       setShowSuccess(true)
-      toast.success('Student created successfully!')
 
       // Reset form
       setFormData({
@@ -157,7 +196,7 @@ export default function CreateStudentPage() {
         session: '2024/2025',
       })
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create student')
+      toast.error(error.message || `Failed to create ${selectedRole}`)
       setShowSuccess(false)
     } finally {
       setLoading(false)
@@ -168,8 +207,8 @@ export default function CreateStudentPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Created Successfully</h1>
-          <p className="text-gray-600 mt-2">Student registration is complete</p>
+          <h1 className="text-3xl font-bold text-gray-900">{successData.role ? `${successData.role.charAt(0).toUpperCase() + successData.role.slice(1)} Created Successfully` : 'Student Created Successfully'}</h1>
+          <p className="text-gray-600 mt-2">{successData.role ? `${successData.role} account has been created` : 'Student registration is complete'}</p>
         </div>
 
         <Card className="border-green-200 bg-green-50">
@@ -217,17 +256,18 @@ export default function CreateStudentPage() {
                     onClick={() => {
                       setShowSuccess(false)
                       setSuccessData(null)
+                      setSelectedRole('student')
                     }}
                     className="flex-1"
                   >
-                    Create Another Student
+                    Create Another {successData.role ? `${successData.role.charAt(0).toUpperCase() + successData.role.slice(1)}` : 'Student'}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => router.push('/admin/registrations')}
                     className="flex-1"
                   >
-                    View All Students
+                    Back to Registrations
                   </Button>
                 </div>
               </div>
@@ -241,21 +281,41 @@ export default function CreateStudentPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Create Student</h1>
-        <p className="text-gray-600 mt-2">Register a new student in the system</p>
+        <h1 className="text-3xl font-bold text-gray-900">Create User Account</h1>
+        <p className="text-gray-600 mt-2">Register a new student, teacher, or admin in the system</p>
+      </div>
+
+      {/* Role Selector */}
+      <div className="flex gap-2">
+        {(['student', 'teacher', 'admin'] as const).map((role) => (
+          <Button
+            key={role}
+            variant={selectedRole === role ? 'default' : 'outline'}
+            onClick={() => setSelectedRole(role)}
+            className="capitalize"
+          >
+            {role === 'admin' ? 'Admin' : role === 'teacher' ? 'Teacher' : 'Student'}
+          </Button>
+        ))}
       </div>
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Registration number will be auto-generated based on the class selected. Format: ELBA/YY/CLASS/###
+          {selectedRole === 'student'
+            ? 'Registration number will be auto-generated based on the class selected. Format: ELBA/YY/CLASS/###'
+            : `${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)} account will be created with full access.`}
         </AlertDescription>
       </Alert>
 
       <Card>
         <CardHeader>
-          <CardTitle>Student Information</CardTitle>
-          <CardDescription>Enter complete student details</CardDescription>
+          <CardTitle className="capitalize">{selectedRole} Information</CardTitle>
+          <CardDescription>
+            {selectedRole === 'student'
+              ? 'Enter complete student details'
+              : `Enter ${selectedRole} account details`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -327,7 +387,8 @@ export default function CreateStudentPage() {
               </div>
             </div>
 
-            {/* Class & Session */}
+            {/* Class & Session - Only show for students */}
+            {selectedRole === 'student' && (
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Class Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -341,23 +402,45 @@ export default function CreateStudentPage() {
                     className={`w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1 ${
                       errors.classId ? 'border-red-500' : ''
                     }`}
-                    disabled={classesLoading}
+                    disabled={classesLoading || classes.length === 0}
                   >
-                    <option value="">Select a class</option>
-                    <optgroup label="Junior Secondary (JSS)">
-                      {classes.filter(c => c.form_level?.startsWith('JSS')).map((cls) => (
-                        <option key={cls.id} value={cls.id}>
-                          {cls.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Senior Secondary (SS)">
-                      {classes.filter(c => c.form_level?.startsWith('SS')).map((cls) => (
-                        <option key={cls.id} value={cls.id}>
-                          {cls.name}
-                        </option>
-                      ))}
-                    </optgroup>
+                    <option value="">
+                      {classesLoading ? 'Loading classes...' : classes.length === 0 ? 'No classes available' : 'Select a class'}
+                    </option>
+                    {!classesLoading && classes.length > 0 && (
+                      <>
+                        {(() => {
+                          const jssClasses = classes.filter(c => c.form_level?.startsWith('JSS'))
+                          if (jssClasses.length > 0) {
+                            return (
+                              <optgroup label="Junior Secondary (JSS)">
+                                {jssClasses.map((cls) => (
+                                  <option key={cls.id} value={cls.id}>
+                                    {cls.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )
+                          }
+                          return null
+                        })()}
+                        {(() => {
+                          const ssClasses = classes.filter(c => c.form_level?.startsWith('SS'))
+                          if (ssClasses.length > 0) {
+                            return (
+                              <optgroup label="Senior Secondary (SS)">
+                                {ssClasses.map((cls) => (
+                                  <option key={cls.id} value={cls.id}>
+                                    {cls.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )
+                          }
+                          return null
+                        })()}
+                      </>
+                    )}
                   </select>
                   {errors.classId && (
                     <p className="text-xs text-red-600 mt-1">{errors.classId}</p>
@@ -380,8 +463,10 @@ export default function CreateStudentPage() {
                 </div>
               </div>
             </div>
+            )}
 
-            {/* Guardian Information */}
+            {/* Guardian Information - Only show for students */}
+            {selectedRole === 'student' && (
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Guardian Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,7 +529,7 @@ export default function CreateStudentPage() {
                 </div>
               </div>
             </div>
-
+            )}
             {/* Login Credentials */}
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Login Credentials</h3>
@@ -469,15 +554,28 @@ export default function CreateStudentPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Password *</label>
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className={`mt-1 ${errors.password ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative mt-1">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className={`pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-xs text-red-600 mt-1">{errors.password}</p>
                   )}
@@ -485,15 +583,28 @@ export default function CreateStudentPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Confirm Password *</label>
-                  <Input
-                    type="password"
-                    placeholder="••••••"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({ ...formData, confirmPassword: e.target.value })
-                    }
-                    className={`mt-1 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                  />
+                  <div className="relative mt-1">
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="••••••"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, confirmPassword: e.target.value })
+                      }
+                      className={`pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.confirmPassword && (
                     <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
                   )}
@@ -511,10 +622,10 @@ export default function CreateStudentPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Student...
+                    Creating {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}...
                   </>
                 ) : (
-                  'Create Student'
+                  `Create ${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}`
                 )}
               </Button>
               <Button

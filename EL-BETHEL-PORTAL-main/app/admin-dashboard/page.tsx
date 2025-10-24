@@ -7,8 +7,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase-client'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowLeft, LogOut, Home, Settings, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { AdminSidebar } from '@/components/admin-sidebar'
 import {
   BarChart,
   Bar,
@@ -430,26 +431,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 pb-8">
-      {/* Header with Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.back()}
-          className="gap-2 hover:bg-gray-100"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-      </div>
-
-      {/* Main Header with Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome back! Here's what's happening with your school.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your school.</p>
+            </div>
+            <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -464,13 +452,13 @@ export default function AdminDashboard() {
             <Download className="w-4 h-4" />
             Export
           </Button>
-        </div>
-      </div>
+            </div>
+          </div>
 
-      {/* Time Range Selector */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm font-medium text-gray-700">Filter by:</span>
-        <div className="flex flex-wrap gap-2">
+          {/* Time Range Selector */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm font-medium text-gray-700">Filter by:</span>
+            <div className="flex flex-wrap gap-2">
           {['today', 'week', 'month', 'year'].map((range) => (
             <Button
               key={range}
@@ -481,12 +469,12 @@ export default function AdminDashboard() {
             >
               {range}
             </Button>
-          ))}
-        </div>
-      </div>
+            ))}
+            </div>
+          </div>
 
-      {/* Quick Stats with Trends */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Quick Stats with Trends */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Users}
           label="Total Students"
@@ -543,7 +531,9 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Fee Collection</p>
                 <p className="text-2xl font-bold text-orange-600">
-                  {((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)}%
+                  {(stats.feesCollected + stats.outstandingFees) > 0
+                    ? ((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)
+                    : '0'}%
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-orange-500" />
@@ -552,7 +542,9 @@ export default function AdminDashboard() {
               <div
                 className="bg-orange-500 h-2 rounded-full"
                 style={{
-                  width: `${((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)}%`,
+                  width: `${(stats.feesCollected + stats.outstandingFees) > 0
+                    ? ((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)
+                    : '0'}%`,
                 }}
               ></div>
             </div>

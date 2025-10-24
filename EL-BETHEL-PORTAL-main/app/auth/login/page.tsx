@@ -54,16 +54,17 @@ export default function LoginPage() {
 
         studentId = student.id
 
-        const { data: userDataArray, error: userError } = await supabase
+        const { data: studentUser, error: userError } = await supabase
           .from('users')
           .select('email')
-          .eq('id', student.user_id)
+          .eq('auth_id', student.user_id)
+          .single()
 
-        if (userError || !userDataArray || userDataArray.length === 0) {
+        if (userError || !studentUser) {
           throw new Error('User account not found for this registration number')
         }
 
-        loginEmail = userDataArray[0].email
+        loginEmail = studentUser.email
       }
 
       const { data: authData, error: authError } =
@@ -75,46 +76,28 @@ export default function LoginPage() {
       if (authError) throw new Error(authError.message)
 
       if (authData.user) {
-        const { data: userDataArray, error: userError } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('*')
-          .eq('id', authData.user.id)
+          .select('id, auth_id, email, full_name, role, created_at')
+          .eq('auth_id', authData.user.id)
+          .single()
 
-        if (userError) {
+        if (userError && userError.code !== 'PGRST116') {
           console.error('Database error fetching user:', userError)
           throw new Error('Failed to fetch user profile: ' + userError.message)
         }
 
-        if (!userDataArray || userDataArray.length === 0) {
-          console.error('No user record found for auth user ID:', authData.user.id)
+        if (!userData) {
           throw new Error('User account not found in the system. Please contact your administrator to create your account.')
         }
 
-        const userData = userDataArray[0]
-
-        // Check if student is approved (if role is student)
-        if (userData.role === 'student') {
-          const { data: studentData, error: studentError } = await supabase
-            .from('students')
-            .select('approved')
-            .eq('user_id', authData.user.id)
-            .single()
-
-          if (studentError) {
-            console.error('Error checking student approval status:', studentError)
-            throw new Error('Failed to verify account status')
-          }
-
-          if (!studentData?.approved) {
-            // Sign them out immediately
-            await supabase.auth.signOut()
-            throw new Error(
-              'Your account is pending admin approval. Please check your email for updates. Contact your school administrator if you have questions.'
-            )
-          }
-        }
-
-        sessionStorage.setItem('user', JSON.stringify(userData))
+        sessionStorage.setItem('user', JSON.stringify({
+          id: userData.id,
+          auth_id: userData.auth_id,
+          email: userData.email,
+          full_name: userData.full_name,
+          role: userData.role,
+        }))
         sessionStorage.setItem('session', JSON.stringify(authData.session))
 
         const roleRoutes: Record<string, string> = {
@@ -391,8 +374,13 @@ export default function LoginPage() {
 
             {/* Links */}
             <div className="space-y-2 text-sm text-center">
-              <p className="text-gray-500">
-                Admin-managed accounts only. Contact your administrator to create an account.
+              <p>
+                <Link
+                  href="/auth/register"
+                  className="text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Create an account
+                </Link>
               </p>
               <p>
                 <Link

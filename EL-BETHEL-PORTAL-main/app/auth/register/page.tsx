@@ -144,7 +144,7 @@ export default function RegisterPage() {
       // Create user record
       const { error: userError } = await supabase.from('users').insert([
         {
-          id: userId,
+          auth_id: userId,
           email: formData.email,
           full_name: role === 'student' ? `${formData.first_name} ${formData.last_name}` : formData.first_name,
           role,
@@ -172,7 +172,7 @@ export default function RegisterPage() {
             guardian_phone: formData.guardianPhone,
             guardian_email: formData.guardianEmail,
             address: formData.address || null,
-            approved: false,
+            approved: true,
           },
         ])
 
@@ -198,11 +198,7 @@ export default function RegisterPage() {
       })
 
       setTimeout(() => {
-        if (role === 'student') {
-          router.push('/auth/login?message=pending-approval')
-        } else {
-          router.push('/auth/login')
-        }
+        router.push('/auth/login')
       }, 3000)
     } catch (err: any) {
       setError(err.message || 'Registration failed')
@@ -309,17 +305,10 @@ export default function RegisterPage() {
                 <div className="flex justify-center">
                   <CheckCircle className="h-16 w-16 text-green-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">Registration Successful!</h3>
-                {role === 'student' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-gray-700 mb-2">
-                      Your account has been created and is pending admin approval.
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      You'll receive an email when your account is approved. After that, you can log in with your email and password.
-                    </p>
-                  </div>
-                )}
+                <h3 className="text-lg font-semibold text-gray-900">Account Created Successfully!</h3>
+                <p className="text-sm text-gray-700">
+                  Your account is ready. You can now log in with your email and password.
+                </p>
                 <p className="text-sm text-gray-600">
                   Redirecting to login page...
                 </p>
@@ -549,7 +538,44 @@ export default function RegisterPage() {
                   </>
                 )}
 
-                {role !== 'student' && (
+                {role === 'admin' && (
+                  <>
+                    <div>
+                      <label htmlFor="first_name" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Full Name
+                      </label>
+                      <Input
+                        id="first_name"
+                        name="first_name"
+                        placeholder="Enter your full name"
+                        value={formData.first_name}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1.5 text-gray-700">
+                        Email Address
+                      </label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        disabled={loading}
+                        className="rounded-lg"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(role === 'teacher' || role === 'parent') && (
                   <>
                     <div>
                       <label htmlFor="first_name" className="block text-sm font-medium mb-1.5 text-gray-700">
