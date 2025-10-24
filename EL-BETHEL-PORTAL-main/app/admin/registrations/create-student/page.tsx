@@ -400,23 +400,45 @@ export default function CreateStudentPage() {
                     className={`w-full px-3 py-2 border border-gray-300 rounded-md text-sm mt-1 ${
                       errors.classId ? 'border-red-500' : ''
                     }`}
-                    disabled={classesLoading}
+                    disabled={classesLoading || classes.length === 0}
                   >
-                    <option value="">Select a class</option>
-                    <optgroup label="Junior Secondary (JSS)">
-                      {classes.filter(c => c.form_level?.startsWith('JSS')).map((cls) => (
-                        <option key={cls.id} value={cls.id}>
-                          {cls.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Senior Secondary (SS)">
-                      {classes.filter(c => c.form_level?.startsWith('SS')).map((cls) => (
-                        <option key={cls.id} value={cls.id}>
-                          {cls.name}
-                        </option>
-                      ))}
-                    </optgroup>
+                    <option value="">
+                      {classesLoading ? 'Loading classes...' : classes.length === 0 ? 'No classes available' : 'Select a class'}
+                    </option>
+                    {!classesLoading && classes.length > 0 && (
+                      <>
+                        {(() => {
+                          const jssClasses = classes.filter(c => c.form_level?.startsWith('JSS'))
+                          if (jssClasses.length > 0) {
+                            return (
+                              <optgroup label="Junior Secondary (JSS)">
+                                {jssClasses.map((cls) => (
+                                  <option key={cls.id} value={cls.id}>
+                                    {cls.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )
+                          }
+                          return null
+                        })()}
+                        {(() => {
+                          const ssClasses = classes.filter(c => c.form_level?.startsWith('SS'))
+                          if (ssClasses.length > 0) {
+                            return (
+                              <optgroup label="Senior Secondary (SS)">
+                                {ssClasses.map((cls) => (
+                                  <option key={cls.id} value={cls.id}>
+                                    {cls.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )
+                          }
+                          return null
+                        })()}
+                      </>
+                    )}
                   </select>
                   {errors.classId && (
                     <p className="text-xs text-red-600 mt-1">{errors.classId}</p>
