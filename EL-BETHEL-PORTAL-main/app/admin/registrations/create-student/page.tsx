@@ -205,8 +205,8 @@ export default function CreateStudentPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Created Successfully</h1>
-          <p className="text-gray-600 mt-2">Student registration is complete</p>
+          <h1 className="text-3xl font-bold text-gray-900">{successData.role ? `${successData.role.charAt(0).toUpperCase() + successData.role.slice(1)} Created Successfully` : 'Student Created Successfully'}</h1>
+          <p className="text-gray-600 mt-2">{successData.role ? `${successData.role} account has been created` : 'Student registration is complete'}</p>
         </div>
 
         <Card className="border-green-200 bg-green-50">
@@ -254,17 +254,18 @@ export default function CreateStudentPage() {
                     onClick={() => {
                       setShowSuccess(false)
                       setSuccessData(null)
+                      setSelectedRole('student')
                     }}
                     className="flex-1"
                   >
-                    Create Another Student
+                    Create Another {successData.role ? `${successData.role.charAt(0).toUpperCase() + successData.role.slice(1)}` : 'Student'}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => router.push('/admin/registrations')}
                     className="flex-1"
                   >
-                    View All Students
+                    Back to Registrations
                   </Button>
                 </div>
               </div>
