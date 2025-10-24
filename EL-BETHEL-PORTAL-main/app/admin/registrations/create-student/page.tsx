@@ -470,7 +470,7 @@ export default function CreateStudentPage() {
                 </div>
               </div>
             </div>
-            )}n
+            )}
             {/* Login Credentials */}
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Login Credentials</h3>
