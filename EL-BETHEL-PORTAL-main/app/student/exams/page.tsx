@@ -1,258 +1,347 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Clock, BookOpen, CheckCircle, AlertTriangle } from 'lucide-react'
-import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Loader2, Calendar, Clock, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
+import { supabase } from '@/lib/supabase-client'
+import { useStudentExams } from '@/hooks/use-student-data'
 
-interface ExamSession {
+interface Exam {
   id: string
-  title: string
-  description: string
-  subject: { name: string; code: string }
+  name: string
+  subject?: string
+  description?: string
   start_time: string
   end_time: string
-  duration_minutes: number
-  status: string
-  total_marks: number
-}
-
-interface ExamAttempt {
-  id: string
-  exam_session_id: string
-  status: string
-  started_at: string
-  submitted_at?: string
-  total_score?: number
-  total_marks?: number
+  exam_type: string
+  status: 'active' | 'completed' | 'upcoming'
+  total_questions: number
+  duration: number
+  instructions?: string
 }
 
 export default function StudentExamsPage() {
   const router = useRouter()
-  const [exams, setExams] = useState<ExamSession[]>([])
-  const [attempts, setAttempts] = useState<Record<string, ExamAttempt>>({})
-  const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
-  const [studentId, setStudentId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const { exams, loading: examsLoading } = useStudentExams(userId)
+  const [userInfo, setUserInfo] = useState<any>(null)
 
   useEffect(() => {
-    const initializePage = async () => {
+    const loadUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
           router.push('/auth/login')
           return
         }
-
         setUserId(user.id)
 
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('id')
-          .eq('user_id', user.id)
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_id', user.id)
           .single()
 
-        if (!studentData) {
-          toast.error('Student profile not found')
-          return
-        }
-
-        setStudentId(studentData.id)
-
-        const response = await fetch(`/api/exams/sessions?role=student&userId=${user.id}`)
-        const examsData = await response.json()
-        setExams(examsData.data || [])
-
-        const attemptsResponse = await fetch(`/api/exams/attempts?studentId=${studentData.id}`)
-        const attemptsData = await attemptsResponse.json()
-
-        const attemptsMap: Record<string, ExamAttempt> = {}
-        attemptsData.data?.forEach((attempt: ExamAttempt) => {
-          attemptsMap[attempt.exam_session_id] = attempt
-        })
-        setAttempts(attemptsMap)
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load exams')
+        setUserInfo(userData)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load')
       } finally {
         setLoading(false)
       }
     }
 
-    initializePage()
+    loadUser()
   }, [router])
 
-  const handleStartExam = async (examId: string) => {
-    if (!studentId) {
-      toast.error('Student profile not found')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/exams/attempts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          examSessionId: examId,
-          studentId,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error(data.error || 'Failed to start exam')
-        return
-      }
-
-      toast.success('Exam started! Good luck!')
-      router.push(`/student/exams/${examId}/take?attemptId=${data.data.id}`)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to start exam')
-    }
-  }
-
-  const handleContinueExam = (examId: string, attemptId: string) => {
-    router.push(`/student/exams/${examId}/take?attemptId=${attemptId}`)
-  }
-
-  const getExamStatus = (exam: ExamSession, attempt?: ExamAttempt) => {
-    if (attempt?.status === 'submitted') {
-      return { label: 'Completed', color: 'bg-green-100 text-green-800', icon: CheckCircle }
-    }
-
+  const getExamStatus = (exam: Exam) => {
     const now = new Date()
     const startTime = new Date(exam.start_time)
     const endTime = new Date(exam.end_time)
 
-    if (attempt?.status === 'in_progress') {
-      return { label: 'In Progress', color: 'bg-blue-100 text-blue-800', icon: Clock }
-    }
+    if (now < startTime) return 'upcoming'
+    if (now >= startTime && now <= endTime) return 'active'
+    return 'completed'
+  }
 
-    if (now < startTime) {
-      return { label: 'Upcoming', color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle }
-    }
+  const sortedExams = {
+    active: exams.filter((e: any) => getExamStatus(e) === 'active'),
+    upcoming: exams.filter((e: any) => getExamStatus(e) === 'upcoming').sort(
+      (a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    ),
+    completed: exams.filter((e: any) => getExamStatus(e) === 'completed'),
+  }
 
-    if (now > endTime) {
-      return { label: 'Closed', color: 'bg-gray-100 text-gray-800', icon: AlertCircle }
-    }
+  const formatDateTime = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
 
-    return { label: 'Active', color: 'bg-green-100 text-green-800', icon: CheckCircle }
+  const getTimeRemaining = (startTime: string) => {
+    const now = new Date()
+    const start = new Date(startTime)
+    const diff = start.getTime() - now.getTime()
+
+    if (diff < 0) return null
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h ${minutes}m`
+    return `${minutes}m`
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading exams...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Exams</h1>
-        <p className="text-gray-600 mt-2">View and take available exams</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Exams</h1>
+              <p className="text-gray-600 mt-2">View and take your scheduled exams</p>
+            </div>
+            <Link href="/student/dashboard">
+              <Button variant="outline">← Back to Dashboard</Button>
+            </Link>
+          </div>
+        </div>
       </div>
 
-      {exams.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-600">No exams available at this time</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {exams.map((exam) => {
-            const attempt = attempts[exam.id]
-            const { label, color, icon: IconComponent } = getExamStatus(exam, attempt)
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-            return (
-              <Card key={exam.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-xl">{exam.title}</CardTitle>
-                      <CardDescription className="mt-2">
-                        <div className="space-y-1">
-                          <p>Subject: {exam.subject?.name}</p>
-                          <p>Duration: {exam.duration_minutes} minutes</p>
-                          <p>Total Marks: {exam.total_marks}</p>
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="mb-6 bg-white border border-gray-200">
+            <TabsTrigger value="active" className="relative">
+              Active
+              {sortedExams.active.length > 0 && (
+                <Badge className="ml-2 bg-red-600">{sortedExams.active.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="relative">
+              Upcoming
+              {sortedExams.upcoming.length > 0 && (
+                <Badge className="ml-2 bg-blue-600">{sortedExams.upcoming.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="relative">
+              Completed
+              {sortedExams.completed.length > 0 && (
+                <Badge className="ml-2 bg-green-600">{sortedExams.completed.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Active Exams */}
+          <TabsContent value="active" className="space-y-4">
+            {examsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : sortedExams.active.length > 0 ? (
+              sortedExams.active.map((exam: any) => (
+                <Card
+                  key={exam.id}
+                  className="border-l-4 border-l-red-600 hover:shadow-md transition-shadow"
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-red-600">IN PROGRESS</Badge>
+                          <Badge variant="outline">{exam.total_questions || 0} Questions</Badge>
                         </div>
-                      </CardDescription>
+                        <CardTitle>{exam.name || exam.subject}</CardTitle>
+                        <CardDescription>
+                          Duration: {exam.duration || 120} minutes
+                        </CardDescription>
+                      </div>
+                      <Button
+                        onClick={() => router.push(`/student/exams/${exam.id}/take`)}
+                        className="bg-red-600 hover:bg-red-700"
+                        size="lg"
+                      >
+                        Continue Exam <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
                     </div>
-                    <Badge className={color}>
-                      <IconComponent className="w-4 h-4 mr-1" />
-                      {label}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {exam.description && (
+                  </CardHeader>
+                  {exam.description && (
+                    <CardContent>
                       <p className="text-sm text-gray-600">{exam.description}</p>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600">Start Time</p>
-                        <p className="font-medium">
-                          {new Date(exam.start_time).toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">End Time</p>
-                        <p className="font-medium">
-                          {new Date(exam.end_time).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {attempt?.status === 'submitted' && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-sm font-medium text-green-800">
-                          Exam submitted on {new Date(attempt.submitted_at!).toLocaleString()}
-                        </p>
-                        {attempt.total_score !== undefined && (
-                          <p className="text-sm text-green-700 mt-1">
-                            Score: {attempt.total_score} / {attempt.total_marks}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex gap-3">
-                      {!attempt ? (
-                        <Button
-                          onClick={() => handleStartExam(exam.id)}
-                          className="w-full"
-                          disabled={new Date() > new Date(exam.end_time)}
-                        >
-                          Start Exam
-                        </Button>
-                      ) : attempt.status === 'in_progress' ? (
-                        <Button
-                          onClick={() => handleContinueExam(exam.id, attempt.id)}
-                          className="w-full"
-                          variant="outline"
-                        >
-                          Continue Exam
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
+                    </CardContent>
+                  )}
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 text-lg">No active exams</p>
+                  <p className="text-gray-500 mt-1">You don't have any exams in progress</p>
                 </CardContent>
               </Card>
-            )
-          })}
-        </div>
-      )}
+            )}
+          </TabsContent>
+
+          {/* Upcoming Exams */}
+          <TabsContent value="upcoming" className="space-y-4">
+            {examsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : sortedExams.upcoming.length > 0 ? (
+              sortedExams.upcoming.map((exam: any) => (
+                <Card
+                  key={exam.id}
+                  className="border-l-4 border-l-blue-600 hover:shadow-md transition-shadow"
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-blue-600">UPCOMING</Badge>
+                          <Badge variant="outline">{exam.total_questions || 0} Questions</Badge>
+                        </div>
+                        <CardTitle>{exam.name || exam.subject}</CardTitle>
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-gray-500" />
+                            <span>{formatDateTime(exam.start_time)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <span>{exam.duration || 120} minutes</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {getTimeRemaining(exam.start_time) || 'Soon'}
+                        </div>
+                        <p className="text-xs text-gray-500">Time remaining</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  {exam.description && (
+                    <CardContent>
+                      <p className="text-sm text-gray-600">{exam.description}</p>
+                    </CardContent>
+                  )}
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 text-lg">No upcoming exams</p>
+                  <p className="text-gray-500 mt-1">Check back later for scheduled exams</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Completed Exams */}
+          <TabsContent value="completed" className="space-y-4">
+            {examsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : sortedExams.completed.length > 0 ? (
+              sortedExams.completed.map((exam: any) => (
+                <Card
+                  key={exam.id}
+                  className="border-l-4 border-l-green-600 hover:shadow-md transition-shadow"
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-green-600 flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            COMPLETED
+                          </Badge>
+                          <Badge variant="outline">{exam.total_questions || 0} Questions</Badge>
+                        </div>
+                        <CardTitle>{exam.name || exam.subject}</CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-3">
+                          <Calendar className="h-4 w-4" />
+                          <span>{formatDateTime(exam.start_time)}</span>
+                        </div>
+                      </div>
+                      <Link href={`/student/results?exam=${exam.id}`}>
+                        <Button variant="outline">View Results</Button>
+                      </Link>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 text-lg">No completed exams</p>
+                  <p className="text-gray-500 mt-1">Your exam results will appear here</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Exam Tips */}
+        <Card className="mt-8 bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg">Exam Tips</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <span>Ensure stable internet connection before starting an exam</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <span>Read all instructions carefully before beginning</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <span>Manage your time effectively during the exam</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <span>Do not close the browser or refresh the page during the exam</span>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

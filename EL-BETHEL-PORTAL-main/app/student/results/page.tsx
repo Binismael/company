@@ -1,305 +1,329 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-client'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, TrendingUp, Award, BarChart3, Download, AlertCircle } from 'lucide-react'
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { toast } from 'sonner'
+import { Loader2, Award, TrendingUp, Download, AlertCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase-client'
+import { useStudentResults, useStudentProfile } from '@/hooks/use-student-data'
 
 interface Result {
   id: string
-  subject: { name: string; code: string }
+  subject: string
   score: number
   grade: string
+  percentage: number
   term: string
   session: string
-  max_score: number
-  teacher_comment?: string
-  created_at: string
-}
-
-interface PerformanceSummary {
-  averageScore: number
-  totalSubjects: number
-  excellentCount: number
-  goodCount: number
-  averageCount: number
-  belowAverageCount: number
+  exam_date: string
+  teacher_feedback?: string
 }
 
 export default function StudentResultsPage() {
   const router = useRouter()
-  const [results, setResults] = useState<Result[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedTerm, setSelectedTerm] = useState<string>('')
-  const [selectedSession, setSelectedSession] = useState<string>('')
-  const [summary, setSummary] = useState<PerformanceSummary | null>(null)
+  const [error, setError] = useState('')
+  const { results, loading: resultsLoading } = useStudentResults(userId)
+  const { profile } = useStudentProfile(userId)
 
   useEffect(() => {
-    const loadResults = async () => {
+    const loadUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
           router.push('/auth/login')
           return
         }
-
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('id')
-          .eq('user_id', user.id)
-          .single()
-
-        if (!studentData) {
-          toast.error('Student profile not found')
-          return
-        }
-
-        const { data: resultsData, error } = await supabase
-          .from('results')
-          .select(`
-            *,
-            subject:subjects(name, code)
-          `)
-          .eq('student_id', studentData.id)
-          .order('created_at', { ascending: false })
-
-        if (error) throw error
-
-        setResults(resultsData || [])
-        
-        if (resultsData && resultsData.length > 0) {
-          const latestResult = resultsData[0]
-          setSelectedTerm(latestResult.term)
-          setSelectedSession(latestResult.session)
-          calculateSummary(resultsData)
-        }
-      } catch (error: any) {
-        toast.error(error.message || 'Failed to load results')
+        setUserId(user.id)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load')
       } finally {
         setLoading(false)
       }
     }
 
-    loadResults()
+    loadUser()
   }, [router])
 
-  const calculateSummary = (data: Result[]) => {
-    const avg = data.reduce((sum, r) => sum + r.score, 0) / data.length
-    const excellent = data.filter(r => ['A', 'A+'].includes(r.grade)).length
-    const good = data.filter(r => ['B', 'B+'].includes(r.grade)).length
-    const average = data.filter(r => ['C', 'C+'].includes(r.grade)).length
-    const belowAverage = data.filter(r => ['D', 'F'].includes(r.grade)).length
-
-    setSummary({
-      averageScore: Math.round(avg),
-      totalSubjects: data.length,
-      excellentCount: excellent,
-      goodCount: good,
-      averageCount: average,
-      belowAverageCount: belowAverage,
-    })
-  }
-
-  const filteredResults = results.filter(
-    r => r.term === selectedTerm && r.session === selectedSession
-  )
-
   const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A':
-      case 'A+':
-        return 'bg-green-100 text-green-800'
-      case 'B':
-      case 'B+':
-        return 'bg-blue-100 text-blue-800'
-      case 'C':
-      case 'C+':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'D':
-        return 'bg-orange-100 text-orange-800'
-      case 'F':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+    const grades: Record<string, string> = {
+      'A': 'bg-green-100 text-green-800 border-green-300',
+      'B': 'bg-blue-100 text-blue-800 border-blue-300',
+      'C': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      'D': 'bg-orange-100 text-orange-800 border-orange-300',
+      'F': 'bg-red-100 text-red-800 border-red-300',
     }
+    return grades[grade] || 'bg-gray-100 text-gray-800'
   }
 
-  const chartData = filteredResults.map(r => ({
-    name: r.subject.code,
-    score: r.score,
-    maxScore: r.max_score,
-  }))
+  const getGradePoints = (grade: string): number => {
+    const points: Record<string, number> = {
+      'A': 5,
+      'B': 4,
+      'C': 3,
+      'D': 2,
+      'F': 0,
+    }
+    return points[grade] || 0
+  }
+
+  const calculateGPA = () => {
+    if (results.length === 0) return 0
+    const totalPoints = results.reduce((sum: number, r: any) => sum + getGradePoints(r.grade), 0)
+    return (totalPoints / results.length).toFixed(2)
+  }
+
+  const calculateAverageScore = () => {
+    if (results.length === 0) return 0
+    const total = results.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
+    return (total / results.length).toFixed(1)
+  }
+
+  const groupedResults = results.reduce((acc: any, result: any) => {
+    const term = result.term || 'Unknown'
+    if (!acc[term]) {
+      acc[term] = []
+    }
+    acc[term].push(result)
+    return acc
+  }, {})
+
+  const handleDownloadSlip = (resultId: string) => {
+    // This would typically trigger a PDF download
+    alert('Result slip download feature coming soon')
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
-      </div>
-    )
-  }
-
-  if (results.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Academic Results</h1>
-          <p className="text-gray-600 mt-2">View your academic performance and grades</p>
-        </div>
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            No results available yet. Results will appear here once your teacher releases them.
-          </AlertDescription>
-        </Alert>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Academic Results</h1>
-        <p className="text-gray-600 mt-2">View your academic performance and grades</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Results</h1>
+              <p className="text-gray-600 mt-2">View your academic performance and grades</p>
+            </div>
+            <Link href="/student/dashboard">
+              <Button variant="outline">← Back to Dashboard</Button>
+            </Link>
+          </div>
+        </div>
       </div>
 
-      {/* Performance Summary */}
-      {summary && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">GPA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {resultsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-blue-600">{calculateGPA()}</div>
+                  <p className="text-xs text-gray-500 mt-1">{results.length} subjects</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-gray-600">Average Score</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary-600">{summary.averageScore}</div>
-              <p className="text-xs text-gray-500 mt-1">Out of 100</p>
+              {resultsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-green-600">{calculateAverageScore()}%</div>
+                  <p className="text-xs text-gray-500 mt-1">Overall performance</p>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Subjects</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Best Subject</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600">{summary.totalSubjects}</div>
-              <p className="text-xs text-gray-500 mt-1">Enrolled courses</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Excellent Grades</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{summary.excellentCount}</div>
-              <p className="text-xs text-gray-500 mt-1">A & A+ grades</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Below Average</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{summary.belowAverageCount}</div>
-              <p className="text-xs text-gray-500 mt-1">D & F grades</p>
+              {resultsLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : results.length > 0 ? (
+                <>
+                  <div className="text-3xl font-bold text-amber-600">
+                    {results.reduce((best: any, current: any) =>
+                      (current.score || 0) > (best.score || 0) ? current : best
+                    ).subject}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Highest performing</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-xl text-gray-500">N/A</div>
+                  <p className="text-xs text-gray-500 mt-1">No results yet</p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
-      )}
 
-      {/* Charts */}
-      {chartData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Score Distribution</CardTitle>
-            <CardDescription>Your scores across all subjects</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="score" fill="#1e40af" name="Your Score" />
-                <Bar dataKey="maxScore" fill="#e5e7eb" name="Max Score" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Detailed Results */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Detailed Results</CardTitle>
-              <CardDescription>Per-subject breakdown and feedback</CardDescription>
-            </div>
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Download Report
-            </Button>
+        {/* Results by Term */}
+        {resultsLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {filteredResults.length > 0 ? (
-              filteredResults.map((result) => (
-                <div key={result.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{result.subject.name}</h3>
-                      <p className="text-sm text-gray-600">Code: {result.subject.code}</p>
-                    </div>
-                    <Badge className={getGradeColor(result.grade)}>
-                      {result.grade}
-                    </Badge>
-                  </div>
+        ) : Object.keys(groupedResults).length > 0 ? (
+          <Tabs defaultValue={Object.keys(groupedResults)[0]} className="w-full">
+            <TabsList className="mb-6 bg-white border border-gray-200">
+              {Object.keys(groupedResults).map((term) => (
+                <TabsTrigger key={term} value={term}>
+                  {term}
+                  <Badge className="ml-2 bg-blue-600">
+                    {groupedResults[term].length}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-                  <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
-                    <div>
-                      <p className="text-gray-600">Score</p>
-                      <p className="font-semibold text-lg">{result.score}/{result.max_score}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Percentage</p>
-                      <p className="font-semibold text-lg">
-                        {((result.score / result.max_score) * 100).toFixed(1)}%
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600">Released</p>
-                      <p className="font-semibold text-lg">
-                        {new Date(result.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
+            {Object.keys(groupedResults).map((term) => (
+              <TabsContent key={term} value={term} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  {groupedResults[term].map((result: any) => (
+                    <Card key={result.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-lg">
+                              {result.subjects?.name || result.subject}
+                            </CardTitle>
+                            <CardDescription>
+                              Exam Date: {new Date(result.exam_date).toLocaleDateString()}
+                            </CardDescription>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <div className={`badge px-3 py-1 rounded-full font-bold ${getGradeColor(result.grade)}`}>
+                                {result.grade}
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">{result.score || 0}/100</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
 
-                  {result.teacher_comment && (
-                    <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
-                      <p className="text-sm font-medium text-blue-900">Teacher's Comment</p>
-                      <p className="text-sm text-blue-800 mt-1">{result.teacher_comment}</p>
-                    </div>
-                  )}
+                      <CardContent className="space-y-3">
+                        {/* Score Bar */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-600">Score</span>
+                            <span className="text-sm font-bold text-gray-900">{result.percentage || 0}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                result.percentage >= 80
+                                  ? 'bg-green-600'
+                                  : result.percentage >= 60
+                                  ? 'bg-yellow-600'
+                                  : 'bg-red-600'
+                              }`}
+                              style={{ width: `${result.percentage || 0}%` }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        {/* Teacher Feedback */}
+                        {result.teacher_feedback && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-blue-900 mb-1">Teacher's Feedback</p>
+                            <p className="text-sm text-blue-800">{result.teacher_feedback}</p>
+                          </div>
+                        )}
+
+                        {/* Download Button */}
+                        <Button
+                          onClick={() => handleDownloadSlip(result.id)}
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Result Slip
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ))
-            ) : (
-              <p className="text-center py-8 text-gray-600">No results for this term</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Award className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg">No results available</p>
+              <p className="text-gray-500 mt-1">Your exam results will appear here once graded</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Performance Tips */}
+        {results.length > 0 && (
+          <Card className="mt-8 bg-blue-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Performance Tips
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 font-bold">•</span>
+                  <span>Focus on improving subjects where you scored below 60%</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 font-bold">•</span>
+                  <span>Practice regularly with past exam questions</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 font-bold">•</span>
+                  <span>Consult with teachers for additional support</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-600 font-bold">•</span>
+                  <span>Use the AI tutor for personalized study recommendations</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

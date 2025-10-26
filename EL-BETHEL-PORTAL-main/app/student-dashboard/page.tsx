@@ -5,61 +5,39 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, BookOpen, Calendar, Award, FileText, Download, TrendingUp, CheckCircle, AlertCircle, Clock, Bell, Megaphone } from 'lucide-react'
+import { Loader2, LogOut, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase-client'
 import StudentPortalLayout from '@/components/student-portal-layout'
 import { useStudentApprovalGuard } from '@/hooks/use-student-approval-guard'
-
-interface Student {
-  id: string
-  user_id: string
-  admission_number: string
-  reg_number?: string
-  date_of_birth?: string
-  gender?: string
-  class: { name: string; form_level: string }
-  user: { full_name: string; email: string }
-}
-
-interface Result {
-  id: string
-  subject: { name: string; code: string }
-  score: number
-  grade: string
-  term: string
-  session: string
-  created_at: string
-}
-
-interface Attendance {
-  id: string
-  attendance_date: string
-  status: string
-  class: { name: string }
-}
-
-interface Assignment {
-  id: string
-  title: string
-  subject: { name: string }
-  due_date: string
-  status: string
-}
+import {
+  useStudentProfile,
+  useStudentClasses,
+  useStudentSubjects,
+  useStudentExams,
+  useStudentResults,
+  useStudentFees,
+  useStudentAttendance,
+} from '@/hooks/use-student-data'
 
 export default function StudentDashboard() {
   const router = useRouter()
   const { isLoading: approvalLoading, isApproved } = useStudentApprovalGuard()
-  const [student, setStudent] = useState<Student | null>(null)
-  const [results, setResults] = useState<Result[]>([])
-  const [attendance, setAttendance] = useState<Attendance[]>([])
-  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userInfo, setUserInfo] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const { profile, loading: profileLoading } = useStudentProfile(userId)
+  const { classes, loading: classesLoading } = useStudentClasses(userId)
+  const { subjects, loading: subjectsLoading } = useStudentSubjects(userId)
+  const { exams, loading: examsLoading } = useStudentExams(userId)
+  const { results, loading: resultsLoading } = useStudentResults(userId)
+  const { fees, totalFees, paidFees, balance, loading: feesLoading } = useStudentFees(userId)
+  const { attendance, loading: attendanceLoading } = useStudentAttendance(userId)
+
   useEffect(() => {
-    const loadData = async () => {
+    const loadUser = async () => {
       try {
         const {
           data: { user },
@@ -70,64 +48,25 @@ export default function StudentDashboard() {
           return
         }
 
-        const { data: studentData, error: studentError } = await supabase
-          .from('students')
-          .select(`
-            *,
-            class:classes(name, form_level),
-            user:users(full_name, email)
-          `)
-          .eq('user_id', user.id)
+        setUserId(user.id)
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_id', user.id)
           .single()
 
-        if (studentError) throw studentError
-        setStudent(studentData)
-
-        const { data: resultsData, error: resultsError } = await supabase
-          .from('results')
-          .select(`
-            *,
-            subject:subjects(name, code)
-          `)
-          .eq('student_id', studentData.id)
-          .order('created_at', { ascending: false })
-
-        if (resultsError) throw resultsError
-        setResults(resultsData)
-
-        const { data: attendanceData, error: attendanceError } = await supabase
-          .from('attendance')
-          .select(`
-            *,
-            class:classes(name)
-          `)
-          .eq('student_id', studentData.id)
-          .order('attendance_date', { ascending: false })
-          .limit(30)
-
-        if (attendanceError) throw attendanceError
-        setAttendance(attendanceData)
-
-        const { data: assignmentsData, error: assignmentsError } = await supabase
-          .from('assignments')
-          .select(`
-            *,
-            subject:subjects(name)
-          `)
-          .eq('class_id', studentData.class_id)
-          .order('due_date', { ascending: true })
-          .limit(10)
-
-        if (assignmentsError) throw assignmentsError
-        setAssignments(assignmentsData)
+        if (userData) {
+          setUserInfo(userData)
+        }
       } catch (err: any) {
-        setError(err.message || 'Failed to load data')
+        setError(err.message || 'Failed to load user')
       } finally {
         setLoading(false)
       }
     }
 
-    loadData()
+    loadUser()
   }, [router])
 
   const handleLogout = async () => {
@@ -145,31 +84,22 @@ export default function StudentDashboard() {
 
   const calculateAverageScore = () => {
     if (results.length === 0) return 0
-    const total = results.reduce((sum, r) => sum + (r.score || 0), 0)
+    const total = results.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
     return (total / results.length).toFixed(2)
   }
 
-  const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A':
-        return 'bg-green-100 text-green-800'
-      case 'B':
-        return 'bg-blue-100 text-blue-800'
-      case 'C':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'D':
-        return 'bg-orange-100 text-orange-800'
-      case 'F':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
+  const getUpcomingExams = () => {
+    const now = new Date()
+    return exams
+      .filter((exam: any) => new Date(exam.start_time) > now)
+      .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+      .slice(0, 3)
   }
 
   if (approvalLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
@@ -194,23 +124,26 @@ export default function StudentDashboard() {
     )
   }
 
+  const upcomingExams = getUpcomingExams()
+  const isDataLoading =
+    profileLoading || classesLoading || subjectsLoading || examsLoading || resultsLoading || feesLoading || attendanceLoading
+
   return (
     <StudentPortalLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-lg font-bold text-white">⚜</span>
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  Welcome, {student?.user.full_name?.split(' ')[0]}
+                  Welcome, {userInfo?.full_name?.split(' ')[0] || 'Student'}
                 </h1>
                 <p className="text-xs sm:text-sm text-gray-600">
-                  Student • ID: {student?.reg_number || student?.admission_number}
+                  {profile?.registration_number && `ID: ${profile.registration_number}`}
                 </p>
               </div>
             </div>
@@ -225,283 +158,242 @@ export default function StudentDashboard() {
             </Button>
           </div>
         </div>
-        </div>
 
-        {/* Main Content */}
-        <div>
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
-                Current GPA
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-primary-600">
-                4.57
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Overall performance
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
-                Overall Grade
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-amber-600">
-                A
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Excellent standing
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
-                Class Position
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-blue-600">
-                3rd
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Out of 45 students
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
-                Attendance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-green-600">
-                {calculateAttendancePercentage()}%
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Present this month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* AI Learning Assistant Section */}
-        <Card className="border-0 shadow-sm mb-8 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-lg">🤖</span>
-              AI Learning Assistant
-            </CardTitle>
-            <CardDescription>
-              Personalized recommendations and study guidance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Focus Area 1 */}
-                <div className="bg-white rounded-lg p-4 border border-red-200 bg-red-50">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">Focus on Organic Chemistry</h3>
-                    <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-                  </div>
-                  <p className="text-xs text-gray-700 mb-3">
-                    You performed in organic chemistry topics needs improvement
-                  </p>
-                  <Button size="sm" variant="outline" className="w-full text-xs">
-                    Start Practice
-                  </Button>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                  Average Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-600">
+                  {isDataLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    calculateAverageScore()
+                  )}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {results.length} results
+                </p>
+              </CardContent>
+            </Card>
 
-                {/* Focus Area 2 */}
-                <div className="bg-white rounded-lg p-4 border border-green-200 bg-green-50">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">Excellent in Calculus</h3>
-                    <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  </div>
-                  <p className="text-xs text-gray-700 mb-3">
-                    You're performing exceptionally well in calculus topics
-                  </p>
-                  <Button size="sm" variant="outline" className="w-full text-xs">
-                    Advanced Problems
-                  </Button>
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                  Total Subjects
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl sm:text-3xl font-bold text-indigo-600">
+                  {isDataLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    subjects.length
+                  )}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Enrolled this term
+                </p>
+              </CardContent>
+            </Card>
 
-                {/* Focus Area 3 */}
-                <div className="bg-white rounded-lg p-4 border border-blue-200 bg-blue-50">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">Physics Assignment Due</h3>
-                    <Clock className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                  </div>
-                  <p className="text-xs text-gray-700 mb-3">
-                    Don't forget physics assignment due tomorrow
-                  </p>
-                  <Button size="sm" variant="outline" className="w-full text-xs">
-                    Submit Now
-                  </Button>
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                  Fees Balance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl sm:text-3xl font-bold text-amber-600">
+                  {isDataLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    `₦${balance.toLocaleString()}`
+                  )}
                 </div>
-              </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Outstanding
+                </p>
+              </CardContent>
+            </Card>
 
-              {/* Chat Section */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-lg">💬</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">Ask AI Tutor</p>
-                    <p className="text-xs text-gray-600">Get instant help with your studies</p>
-                  </div>
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
+                  Attendance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl sm:text-3xl font-bold text-green-600">
+                  {isDataLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    `${calculateAttendancePercentage()}%`
+                  )}
                 </div>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                  Chat Now
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                <p className="text-xs text-gray-500 mt-1">
+                  Present this month
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Navigation Tabs */}
-        <Tabs defaultValue="exam" className="w-full mb-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
-            <button
-              onClick={() => router.push('/student/results')}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
-            >
-              Academics
-            </button>
-            <button
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Button
               onClick={() => router.push('/student/exams')}
-              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap hover:bg-gray-800 transition-colors"
+              className="h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium gap-2 justify-start px-4"
             >
-              Exam
-            </button>
-            <button
+              <Calendar className="h-5 w-5" />
+              <span>My Exams</span>
+            </Button>
+            <Button
+              onClick={() => router.push('/student/results')}
+              variant="outline"
+              className="h-12 font-medium gap-2 justify-start px-4"
+            >
+              📊
+              <span>My Results</span>
+            </Button>
+            <Button
               onClick={() => router.push('/student/payments')}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
+              variant="outline"
+              className="h-12 font-medium gap-2 justify-start px-4"
             >
-              Payments
-            </button>
-            <button
-              onClick={() => router.push('/student/assignments')}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap hover:bg-gray-50 rounded transition-colors"
-            >
-              Assignments
-            </button>
+              💳
+              <span>Pay Fees</span>
+            </Button>
           </div>
 
           {/* Upcoming Exams */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Upcoming Exams</h2>
-              <p className="text-sm text-gray-600 mb-4">Your scheduled CBT and practical exams</p>
-
-              <div className="space-y-3">
-                {/* Exam 1 */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">Mathematics</h3>
-                        <p className="text-sm text-gray-600 mt-1">2024-01-15 • 2 hours</p>
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Upcoming Exams
+              </CardTitle>
+              <CardDescription>
+                Your scheduled exams for this term
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isDataLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : upcomingExams.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingExams.map((exam: any) => (
+                    <div
+                      key={exam.id}
+                      className="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 flex-1">
+                          <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0 mt-1" />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">
+                              {exam.subject || exam.name}
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {new Date(exam.start_time).toLocaleDateString()} •{' '}
+                              {Math.round((new Date(exam.end_time).getTime() - new Date(exam.start_time).getTime()) / 60000)} minutes
+                            </p>
+                          </div>
+                        </div>
+                        <Badge className="bg-blue-600 text-white whitespace-nowrap">
+                          {exam.exam_type || 'CBT'}
+                        </Badge>
                       </div>
                     </div>
-                    <Badge className="bg-blue-600 text-white whitespace-nowrap">CBT</Badge>
-                  </div>
+                  ))}
                 </div>
+              ) : (
+                <p className="text-center text-gray-600 py-8">No upcoming exams scheduled</p>
+              )}
+            </CardContent>
+          </Card>
 
-                {/* Exam 2 */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <Calendar className="h-5 w-5 text-blue-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">Physics</h3>
-                        <p className="text-sm text-gray-600 mt-1">2024-01-17 • 1.5 hours</p>
-                      </div>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Classes Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Classes Enrolled</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isDataLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {classes.length > 0 ? (
+                      classes.map((cls: any) => (
+                        <div
+                          key={cls.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <span className="font-medium text-gray-900">{cls.name}</span>
+                          <Badge variant="outline">{cls.level}</Badge>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-600 py-4">No classes assigned yet</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Fee Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Fee Payment Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isDataLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                      <span className="text-sm font-medium text-gray-900">Paid</span>
+                      <span className="font-semibold text-green-600">₦{paidFees.toLocaleString()}</span>
                     </div>
-                    <Badge className="bg-blue-600 text-white whitespace-nowrap">CBT</Badge>
-                  </div>
-                </div>
-
-                {/* Exam 3 */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <Calendar className="h-5 w-5 text-amber-600 flex-shrink-0 mt-1" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">Chemistry</h3>
-                        <p className="text-sm text-gray-600 mt-1">2024-01-20 • 3 hours</p>
-                      </div>
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-200">
+                      <span className="text-sm font-medium text-gray-900">Outstanding</span>
+                      <span className="font-semibold text-red-600">₦{balance.toLocaleString()}</span>
                     </div>
-                    <Badge className="bg-amber-600 text-white whitespace-nowrap">Practical</Badge>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Exam Preparation */}
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Exam Preparation</h2>
-              <p className="text-sm text-gray-600 mb-4">AI-powered study recommendations</p>
-
-              <div className="space-y-3">
-                {/* Status 1 */}
-                <div className="bg-white rounded-lg p-4 border-l-4 border-l-green-600">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Ready for Mathematics</h3>
-                      <p className="text-sm text-gray-600 mt-1">You've completed 85% of practice questions</p>
+                    <div className="flex justify-between items-center p-3 bg-gray-100 rounded-lg border border-gray-200">
+                      <span className="text-sm font-medium text-gray-900">Total</span>
+                      <span className="font-semibold text-gray-900">₦{totalFees.toLocaleString()}</span>
                     </div>
+                    <Button
+                      onClick={() => router.push('/student/payments')}
+                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      Pay Now
+                    </Button>
                   </div>
-                </div>
-
-                {/* Status 2 */}
-                <div className="bg-white rounded-lg p-4 border-l-4 border-l-amber-600">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Physics Needs Attention</h3>
-                      <p className="text-sm text-gray-600 mt-1">Focus on electromagnetic waves topic</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status 3 */}
-                <div className="bg-white rounded-lg p-4 border-l-4 border-l-red-600">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Chemistry Practice Needed</h3>
-                      <p className="text-sm text-gray-600 mt-1">Complete organic chemistry exercises</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        </Tabs>
+        </div>
       </div>
-    </div>
     </StudentPortalLayout>
   )
 }

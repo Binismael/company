@@ -1,922 +1,437 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { supabase } from '@/lib/supabase-client'
-import { Loader2, ArrowLeft, LogOut, Home, Settings, Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { AdminSidebar } from '@/components/admin-sidebar'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, LogOut, Users, BookOpen, DollarSign, AlertCircle, CheckCircle, TrendingUp, Plus, Calendar } from 'lucide-react'
+import { supabase } from '@/lib/supabase-client'
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from 'recharts'
-import {
-  Users,
-  DollarSign,
-  BookOpen,
-  FileText,
-  AlertCircle,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-  Eye,
-  Download,
-  RefreshCw,
-  Zap,
-} from 'lucide-react'
-
-interface DashboardStats {
-  totalStudents: number
-  totalTeachers: number
-  totalClasses: number
-  feesCollected: number
-  outstandingFees: number
-  activeExams: number
-  attendanceRate: number
-  systemAlerts: number
-}
-
-interface RecentRegistration {
-  id: string
-  name: string
-  role: string
-  date: string
-}
-
-interface SystemAlert {
-  id: string
-  title: string
-  description: string
-  type: 'error' | 'warning' | 'info'
-  timestamp: string
-}
+  useAdminOverview,
+  useAllStudents,
+  useAllTeachers,
+  useAllClasses,
+  useAllSubjects,
+  usePendingApprovals,
+} from '@/hooks/use-admin-data'
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userInfo, setUserInfo] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState<DashboardStats>({
-    totalStudents: 0,
-    totalTeachers: 0,
-    totalClasses: 0,
-    feesCollected: 0,
-    outstandingFees: 0,
-    activeExams: 0,
-    attendanceRate: 0,
-    systemAlerts: 0,
-  })
+  const [error, setError] = useState('')
 
-  const [previousStats, setPreviousStats] = useState({
-    totalStudents: 0,
-    feesCollected: 0,
-    attendanceRate: 0,
-  })
+  const { overview } = useAdminOverview()
+  const { students } = useAllStudents()
+  const { teachers } = useAllTeachers()
+  const { classes } = useAllClasses()
+  const { subjects } = useAllSubjects()
+  const { pending } = usePendingApprovals()
 
-  const [refreshing, setRefreshing] = useState(false)
-  const [selectedTimeRange, setSelectedTimeRange] = useState('week')
-
-  // Fetch real data from Supabase
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const loadUser = async () => {
       try {
-        setLoading(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
+        setUserId(user.id)
 
-        // Get total students
-        const { count: studentCount } = await supabase
-          .from('students')
-          .select('*', { count: 'exact' })
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_id', user.id)
+          .single()
 
-        // Get total teachers
-        const { count: teacherCount } = await supabase
-          .from('teachers')
-          .select('*', { count: 'exact' })
+        if (userData?.role !== 'admin') {
+          router.push('/student-dashboard')
+          return
+        }
 
-        // Get total classes
-        const { count: classCount } = await supabase
-          .from('classes')
-          .select('*', { count: 'exact' })
-
-        // Get active exams (not released)
-        const { count: examCount } = await supabase
-          .from('exams')
-          .select('*', { count: 'exact' })
-          .eq('results_released', false)
-
-        // Get fees data
-        const { data: feesData } = await supabase
-          .from('fees')
-          .select('paid_amount, amount')
-
-        let feesCollected = 0
-        let totalFees = 0
-        feesData?.forEach(fee => {
-          feesCollected += fee.paid_amount || 0
-          totalFees += fee.amount || 0
-        })
-
-        const outstandingFees = totalFees - feesCollected
-
-        // Get attendance data for the current date
-        const today = new Date().toISOString().split('T')[0]
-        const { data: attendanceData, count: attendanceCount } = await supabase
-          .from('attendance')
-          .select('status', { count: 'exact' })
-          .eq('attendance_date', today)
-
-        let presentCount = 0
-        attendanceData?.forEach(record => {
-          if (record.status === 'Present' || record.status === 'Late') {
-            presentCount++
-          }
-        })
-
-        const attendanceRate = attendanceCount ? ((presentCount / attendanceCount) * 100) : 0
-
-        // Get system alerts count
-        const { count: alertCount } = await supabase
-          .from('notifications')
-          .select('*', { count: 'exact' })
-          .eq('read', false)
-
-        setStats({
-          totalStudents: studentCount || 0,
-          totalTeachers: teacherCount || 0,
-          totalClasses: classCount || 0,
-          feesCollected,
-          outstandingFees,
-          activeExams: examCount || 0,
-          attendanceRate: parseFloat(attendanceRate.toFixed(1)),
-          systemAlerts: alertCount || 0,
-        })
-
-        // Set previous stats (simulating last period)
-        setPreviousStats({
-          totalStudents: (studentCount || 0) - 7,
-          feesCollected: feesCollected - 300000,
-          attendanceRate: attendanceRate - 2.3,
-        })
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
+        setUserInfo(userData)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load admin')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchDashboardData()
-  }, [])
+    loadUser()
+  }, [router])
 
-  const [recentRegistrations, setRecentRegistrations] = useState<RecentRegistration[]>([])
-  const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>([])
-  const [attendanceData, setAttendanceData] = useState<any[]>([])
-  const [classPerformanceData, setClassPerformanceData] = useState<any[]>([])
-  const [enrollmentData, setEnrollmentData] = useState<any[]>([])
-  const [revenueData, setRevenueData] = useState<any[]>([])
-  const [feesData, setFeesData] = useState<any[]>([])
-
-  // Fetch real attendance data
-  useEffect(() => {
-    const fetchAttendanceData = async () => {
-      try {
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-        const data = []
-
-        for (let i = 0; i < days.length; i++) {
-          const date = new Date()
-          date.setDate(date.getDate() - (4 - i))
-          const dateStr = date.toISOString().split('T')[0]
-
-          const { count: totalAttendance } = await supabase
-            .from('attendance')
-            .select('*', { count: 'exact' })
-            .eq('attendance_date', dateStr)
-
-          const { count: presentAttendance } = await supabase
-            .from('attendance')
-            .select('*', { count: 'exact' })
-            .eq('attendance_date', dateStr)
-            .or('status.eq.Present,status.eq.Late')
-
-          const attendanceRate = totalAttendance ? ((presentAttendance || 0) / totalAttendance) * 100 : 0
-
-          data.push({
-            name: days[i],
-            attendance: Math.round(attendanceRate),
-            target: 95,
-          })
-        }
-        setAttendanceData(data)
-      } catch (error) {
-        console.error('Error fetching attendance data:', error)
-      }
-    }
-
-    fetchAttendanceData()
-  }, [])
-
-  // Fetch class performance data
-  useEffect(() => {
-    const fetchClassPerformance = async () => {
-      try {
-        const { data: classes } = await supabase
-          .from('classes')
-          .select('id, name')
-
-        if (!classes) return
-
-        const performanceData = await Promise.all(
-          classes.map(async (cls) => {
-            const { data: results } = await supabase
-              .from('results')
-              .select('score')
-              .eq('class_id', cls.id)
-
-            const avgScore = results && results.length > 0
-              ? results.reduce((sum: number, r: any) => sum + (r.score || 0), 0) / results.length
-              : 0
-
-            return {
-              name: cls.name,
-              avg: Math.round(avgScore),
-              target: 80,
-            }
-          })
-        )
-
-        setClassPerformanceData(performanceData)
-      } catch (error) {
-        console.error('Error fetching class performance:', error)
-      }
-    }
-
-    fetchClassPerformance()
-  }, [])
-
-  // Fetch recent registrations
-  useEffect(() => {
-    const fetchRecentRegistrations = async () => {
-      try {
-        const { data } = await supabase
-          .from('users')
-          .select('id, full_name, role, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5)
-
-        if (data) {
-          setRecentRegistrations(
-            data.map((user: any) => ({
-              id: user.id,
-              name: user.full_name,
-              role: user.role,
-              date: new Date(user.created_at).toLocaleDateString(),
-            }))
-          )
-        }
-      } catch (error) {
-        console.error('Error fetching registrations:', error)
-      }
-    }
-
-    fetchRecentRegistrations()
-  }, [])
-
-  // Fetch system alerts (unread notifications)
-  useEffect(() => {
-    const fetchSystemAlerts = async () => {
-      try {
-        const { data } = await supabase
-          .from('notifications')
-          .select('id, title, message, type, created_at')
-          .eq('read', false)
-          .limit(4)
-
-        if (data) {
-          setSystemAlerts(
-            data.map((notif: any) => ({
-              id: notif.id,
-              title: notif.title,
-              description: notif.message,
-              type: (notif.type === 'announcement' ? 'info' : notif.type === 'grade' ? 'warning' : 'error') as 'error' | 'warning' | 'info',
-              timestamp: new Date(notif.created_at).toLocaleString(),
-            }))
-          )
-        }
-      } catch (error) {
-        console.error('Error fetching alerts:', error)
-      }
-    }
-
-    fetchSystemAlerts()
-  }, [])
-
-  // Fetch enrollment trends
-  useEffect(() => {
-    const fetchEnrollmentTrends = async () => {
-      try {
-        const { data: students } = await supabase
-          .from('students')
-          .select('created_at')
-
-        const { data: teachers } = await supabase
-          .from('teachers')
-          .select('created_at')
-
-        // Group by quarter
-        const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
-        const enrollmentTrends = quarters.map((quarter, idx) => ({
-          quarter,
-          students: Math.floor((students?.length || 0) * (0.6 + idx * 0.1)),
-          teachers: Math.floor((teachers?.length || 0) * (0.7 + idx * 0.075)),
-        }))
-
-        setEnrollmentData(enrollmentTrends)
-      } catch (error) {
-        console.error('Error fetching enrollment trends:', error)
-      }
-    }
-
-    fetchEnrollmentTrends()
-  }, [])
-
-  // Build fees data from stats
-  const builtFeesData = [
-    { name: 'Collected', value: stats.feesCollected, fill: '#10b981' },
-    { name: 'Outstanding', value: stats.outstandingFees, fill: '#f59e0b' },
-  ]
-
-  // Build revenue data (simulated from fees for now)
-  const builtRevenueData = [
-    { month: 'Mon', revenue: stats.feesCollected * 0.3, fees: stats.feesCollected * 0.28 },
-    { month: 'Tue', revenue: stats.feesCollected * 0.35, fees: stats.feesCollected * 0.32 },
-    { month: 'Wed', revenue: stats.feesCollected * 0.32, fees: stats.feesCollected * 0.30 },
-    { month: 'Thu', revenue: stats.feesCollected * 0.38, fees: stats.feesCollected * 0.35 },
-    { month: 'Fri', revenue: stats.feesCollected * 0.40, fees: stats.feesCollected * 0.37 },
-    { month: 'Sat', revenue: stats.feesCollected * 0.25, fees: stats.feesCollected * 0.23 },
-  ]
-
-  const statChanges = useMemo(() => ({
-    studentChange: ((stats.totalStudents - previousStats.totalStudents) / previousStats.totalStudents * 100).toFixed(1),
-    feeChange: ((stats.feesCollected - previousStats.feesCollected) / previousStats.feesCollected * 100).toFixed(1),
-    attendanceChange: (stats.attendanceRate - previousStats.attendanceRate).toFixed(1),
-  }), [stats, previousStats])
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setRefreshing(false)
-  }, [])
-
-  const StatCard = ({ icon: Icon, label, value, unit, color, trend, trendValue }: any) => (
-    <Card className="hover:shadow-md transition-all hover:border-primary-200 border-transparent">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
-            <p className={`text-3xl font-bold ${color}`}>
-              {typeof value === 'number' && value > 1000000
-                ? `₦${(value / 1000000).toFixed(1)}M`
-                : typeof value === 'number' && value > 100
-                  ? `${value}%`
-                  : value}
-            </p>
-            {unit && <p className="text-xs text-gray-500 mt-1">{unit}</p>}
-            {trendValue && (
-              <div className={`flex items-center gap-1 mt-2 text-sm font-medium ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {trend === 'up' ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                {Math.abs(parseFloat(trendValue))}% vs last period
-              </div>
-            )}
-          </div>
-          <div className={`p-3 rounded-lg bg-gradient-to-br ${
-            color.includes('blue') ? 'from-blue-100 to-blue-50' :
-            color.includes('green') ? 'from-green-100 to-green-50' :
-            color.includes('purple') ? 'from-purple-100 to-purple-50' :
-            'from-orange-100 to-orange-50'
-          }`}>
-            <Icon className={`w-6 h-6 ${color}`} />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-primary-600 mx-auto" />
-          <p className="text-gray-600">Loading dashboard data...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     )
   }
 
+  const feePercentage = overview
+    ? ((overview.total_fees_paid / overview.total_fees_expected) * 100).toFixed(1)
+    : 0
+
   return (
-    <div className="space-y-8 pb-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your school.</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-lg font-bold text-white">⚙️</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-sm text-gray-600">Welcome, {userInfo?.full_name}</p>
+              </div>
             </div>
-            <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-          <Button size="sm" className="gap-2">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-            </div>
-          </div>
-
-          {/* Time Range Selector */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-medium text-gray-700">Filter by:</span>
-            <div className="flex flex-wrap gap-2">
-          {['today', 'week', 'month', 'year'].map((range) => (
             <Button
-              key={range}
-              variant={selectedTimeRange === range ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedTimeRange(range)}
-              className="capitalize"
+              variant="outline"
+              onClick={handleLogout}
+              className="gap-2"
             >
-              {range}
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
             </Button>
-            ))}
-            </div>
           </div>
-
-          {/* Quick Stats with Trends */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Users}
-          label="Total Students"
-          value={stats.totalStudents}
-          unit="Enrolled"
-          color="text-blue-600"
-          trend="up"
-          trendValue={statChanges.studentChange}
-        />
-        <StatCard
-          icon={BookOpen}
-          label="Total Teachers"
-          value={stats.totalTeachers}
-          unit="Teaching"
-          color="text-green-600"
-        />
-        <StatCard
-          icon={BookOpen}
-          label="Total Classes"
-          value={stats.totalClasses}
-          unit="Active"
-          color="text-purple-600"
-        />
-        <StatCard
-          icon={FileText}
-          label="Active Exams"
-          value={stats.activeExams}
-          unit="In Progress"
-          color="text-orange-600"
-        />
+        </div>
       </div>
 
-      {/* KPI Cards with Goals */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Attendance Rate</p>
-                <p className="text-2xl font-bold text-green-600">{stats.attendanceRate}%</p>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Pending Alerts */}
+        {(pending.students.length > 0 || pending.exams.length > 0 || pending.results.length > 0) && (
+          <Alert className="mb-6 bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 ml-2">
+              You have {pending.students.length} pending student approvals, {pending.exams.length} pending exams, and {pending.results.length} pending results to review.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Total Students
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">
+                {overview?.total_students || 0}
               </div>
-              <Eye className="w-8 h-8 text-green-500" />
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-green-500 h-2 rounded-full" style={{ width: `${stats.attendanceRate}%` }}></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Target: 95% • {statChanges.attendanceChange}% vs last period</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs text-gray-500 mt-1">Registered</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Fee Collection</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {(stats.feesCollected + stats.outstandingFees) > 0
-                    ? ((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)
-                    : '0'}%
-                </p>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Total Teachers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">
+                {overview?.total_teachers || 0}
               </div>
-              <DollarSign className="w-8 h-8 text-orange-500" />
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-orange-500 h-2 rounded-full"
-                style={{
-                  width: `${(stats.feesCollected + stats.outstandingFees) > 0
-                    ? ((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(0)
-                    : '0'}%`,
-                }}
-              ></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Outstanding: ₦{(stats.outstandingFees / 1000000).toFixed(1)}M</p>
-          </CardContent>
-        </Card>
+              <p className="text-xs text-gray-500 mt-1">On Staff</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">System Health</p>
-                <p className="text-2xl font-bold text-blue-600">98%</p>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Fees Collected
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600">
+                ₦{(overview?.total_fees_paid || 0).toLocaleString()}
               </div>
-              <Zap className="w-8 h-8 text-blue-500" />
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-500 h-2 rounded-full" style={{ width: '98%' }}></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">All systems operational</p>
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-xs text-gray-500 mt-1">{feePercentage}% of total</p>
+            </CardContent>
+          </Card>
 
-      {/* Tabs for Different Views */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-        </TabsList>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Outstanding Fees
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">
+                ₦{(overview?.total_fees_expected - (overview?.total_fees_paid || 0) || 0).toLocaleString()}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Due</p>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Link href="/admin/registrations/create-student">
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 h-12 gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Student</span>
+            </Button>
+          </Link>
+          <Link href="/admin/registrations/create-teacher">
+            <Button className="w-full bg-green-600 hover:bg-green-700 h-12 gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add Teacher</span>
+            </Button>
+          </Link>
+          <Link href="/admin/registrations/pending">
+            <Button variant="outline" className="w-full h-12 gap-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Approvals</span>
+            </Button>
+          </Link>
+          <Link href="/admin/classes">
+            <Button variant="outline" className="w-full h-12 gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Classes</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* System Overview */}
             <Card>
               <CardHeader>
-                <CardTitle>Fees Overview</CardTitle>
-                <CardDescription>Current term fee collection status</CardDescription>
+                <CardTitle>System Overview</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={builtFeesData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ₦${(value / 1000000).toFixed(1)}M`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {builtFeesData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `₦${(value / 1000000).toFixed(1)}M`} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-6 space-y-3">
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-600">Collected</span>
-                    <span className="font-semibold text-green-600">₦{(stats.feesCollected / 1000000).toFixed(1)}M</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-gray-600 mb-1">Classes</p>
+                    <p className="text-2xl font-bold text-blue-600">{classes.length}</p>
                   </div>
-                  <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-600">Outstanding</span>
-                    <span className="font-semibold text-amber-600">₦{(stats.outstandingFees / 1000000).toFixed(1)}M</span>
+                  <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                    <p className="text-sm font-medium text-gray-600 mb-1">Subjects</p>
+                    <p className="text-2xl font-bold text-indigo-600">{subjects.length}</p>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Collection Rate</span>
-                    <span className="font-semibold">
-                      {((stats.feesCollected / (stats.feesCollected + stats.outstandingFees)) * 100).toFixed(1)}%
-                    </span>
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm font-medium text-gray-600 mb-1">Pending Exams</p>
+                    <p className="text-2xl font-bold text-amber-600">{overview?.pending_exams || 0}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                    <p className="text-sm font-medium text-gray-600 mb-1">Pending Results</p>
+                    <p className="text-2xl font-bold text-red-600">{overview?.pending_results || 0}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Recent Students */}
             <Card>
               <CardHeader>
-                <CardTitle>Weekly Attendance</CardTitle>
-                <CardDescription>Average attendance across all classes</CardDescription>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Recent Students
+                  </span>
+                  <Link href="/admin/users">
+                    <Button variant="ghost" size="sm">View All</Button>
+                  </Link>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={attendanceData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value) => `${value}%`} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="attendance"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      dot={{ fill: '#10b981', r: 5 }}
-                      name="Actual"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="target"
-                      stroke="#d1d5db"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      name="Target"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {students.length > 0 ? (
+                  <div className="space-y-2">
+                    {students.slice(0, 5).map((student: any) => (
+                      <div
+                        key={student.id}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {student.users?.full_name || 'N/A'}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {student.registration_number}
+                          </p>
+                        </div>
+                        <Badge variant="outline">{student.class_level}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-600 py-4">No students registered yet</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Teachers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Recent Teachers
+                  </span>
+                  <Link href="/admin/teachers">
+                    <Button variant="ghost" size="sm">View All</Button>
+                  </Link>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {teachers.length > 0 ? (
+                  <div className="space-y-2">
+                    {teachers.slice(0, 5).map((teacher: any) => (
+                      <div
+                        key={teacher.id}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {teacher.users?.full_name || 'N/A'}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {teacher.employee_id}
+                          </p>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-600 py-4">No teachers registered yet</p>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Pending Approvals */}
+            {(pending.students.length > 0 || pending.exams.length > 0) && (
+              <Card className="border-amber-200 bg-amber-50">
                 <CardHeader>
-                  <CardTitle>Class Performance (Average Scores)</CardTitle>
-                  <CardDescription>Current academic performance by class</CardDescription>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    Pending Actions
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={classPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip formatter={(value) => `${value}%`} />
-                      <Legend />
-                      <Bar dataKey="avg" fill="#1e40af" radius={[8, 8, 0, 0]} name="Current" />
-                      <Bar dataKey="target" fill="#d1d5db" radius={[8, 8, 0, 0]} name="Target" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <CardContent className="space-y-3">
+                  {pending.students.length > 0 && (
+                    <Link href="/admin/registrations/pending">
+                      <div className="p-3 bg-white border border-amber-200 rounded-lg hover:border-amber-300 transition-colors cursor-pointer">
+                        <p className="text-sm font-medium text-gray-900">
+                          Student Approvals
+                        </p>
+                        <p className="text-2xl font-bold text-amber-600 mt-1">
+                          {pending.students.length}
+                        </p>
+                      </div>
+                    </Link>
+                  )}
+                  {pending.exams.length > 0 && (
+                    <Link href="/admin/exams">
+                      <div className="p-3 bg-white border border-amber-200 rounded-lg hover:border-amber-300 transition-colors cursor-pointer">
+                        <p className="text-sm font-medium text-gray-900">
+                          Pending Exams
+                        </p>
+                        <p className="text-2xl font-bold text-amber-600 mt-1">
+                          {pending.exams.length}
+                        </p>
+                      </div>
+                    </Link>
+                  )}
+                  {pending.results.length > 0 && (
+                    <Link href="/admin/results">
+                      <div className="p-3 bg-white border border-amber-200 rounded-lg hover:border-amber-300 transition-colors cursor-pointer">
+                        <p className="text-sm font-medium text-gray-900">
+                          Pending Results
+                        </p>
+                        <p className="text-2xl font-bold text-amber-600 mt-1">
+                          {pending.results.length}
+                        </p>
+                      </div>
+                    </Link>
+                  )}
                 </CardContent>
               </Card>
-            </div>
+            )}
 
-            <Card className="bg-gradient-to-br from-primary-50 to-secondary-50 border-primary-200">
-              <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
-                <CardDescription>Common administrative tasks</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
-                  onClick={() => router.push('/admin/exams')}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Create Exam
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
-                  onClick={() => router.push('/admin/users')}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Add Student
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
-                  onClick={() => router.push('/admin/results')}
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Upload Result
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start hover:bg-white hover:border-primary-300 transition-colors"
-                  onClick={() => router.push('/admin/announcements')}
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Send Announcement
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue Trends</CardTitle>
-              <CardDescription>Daily revenue and fee collection</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {builtRevenueData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={400}>
-                  <AreaChart data={builtRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => `₦${(value / 1000000).toFixed(2)}M`} />
-                    <Legend />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      fill="#1e40af"
-                      stroke="#1e40af"
-                      name="Total Revenue"
-                      opacity={0.6}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="fees"
-                      fill="#10b981"
-                      stroke="#10b981"
-                      name="Fee Collection"
-                      opacity={0.6}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-gray-500 py-8">No revenue data available</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Enrollment Growth</CardTitle>
-              <CardDescription>Students and teachers growth trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {enrollmentData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={enrollmentData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="quarter" />
-                    <YAxis yAxisId="left" />
-                    <YAxis yAxisId="right" orientation="right" />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="students" fill="#1e40af" yAxisId="left" name="Students" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="teachers" fill="#f59e0b" yAxisId="right" name="Teachers" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-center text-gray-500 py-8">No enrollment data available</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Performance Tab */}
-        <TabsContent value="performance" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Quick Stats */}
             <Card>
               <CardHeader>
-                <CardTitle>Performance Summary</CardTitle>
-                <CardDescription>Key metrics comparison</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Academic Performance</span>
-                    <span className="text-sm font-bold text-blue-600">82%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '82%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Student Engagement</span>
-                    <span className="text-sm font-bold text-green-600">76%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-green-600 h-2 rounded-full" style={{ width: '76%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Financial Health</span>
-                    <span className="text-sm font-bold text-orange-600">79%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-orange-600 h-2 rounded-full" style={{ width: '79%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Infrastructure</span>
-                    <span className="text-sm font-bold text-purple-600">95%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-purple-600 h-2 rounded-full" style={{ width: '95%' }}></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recommendations</CardTitle>
-                <CardDescription>Based on performance metrics</CardDescription>
+                <CardTitle className="text-base">At A Glance</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm font-medium text-blue-900">Boost Student Engagement</p>
-                  <p className="text-xs text-blue-700 mt-1">Consider introducing interactive learning modules</p>
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm text-gray-600">Total Users</span>
+                  <span className="font-bold text-gray-900">
+                    {(overview?.total_students || 0) + (overview?.total_teachers || 0)}
+                  </span>
                 </div>
-                <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <p className="text-sm font-medium text-orange-900">Follow-up on Outstanding Fees</p>
-                  <p className="text-xs text-orange-700 mt-1">5 students have overdue payments</p>
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm text-gray-600">Classes</span>
+                  <span className="font-bold text-gray-900">{classes.length}</span>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm font-medium text-green-900">Excellent Infrastructure</p>
-                  <p className="text-xs text-green-700 mt-1">System health is at 98% - great work!</p>
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm text-gray-600">Subjects</span>
+                  <span className="font-bold text-gray-900">{subjects.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="text-sm text-gray-600">Fee Collection</span>
+                  <span className="font-bold text-green-600">{feePercentage}%</span>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
 
-      {/* System Alerts */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-600" />
-            System Alerts
-          </CardTitle>
-          <CardDescription>Important notifications and warnings</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {systemAlerts.length === 0 ? (
-            <p className="text-sm text-gray-600">No alerts at this time</p>
-          ) : (
-            systemAlerts.map((alert) => (
-              <Alert key={alert.id} variant={alert.type === 'error' ? 'destructive' : 'default'}>
-                <div className="flex items-start gap-3">
-                  {alert.type === 'error' && <AlertTriangle className="w-4 h-4 mt-0.5" />}
-                  {alert.type === 'warning' && <AlertCircle className="w-4 h-4 mt-0.5" />}
-                  {alert.type === 'info' && <CheckCircle className="w-4 h-4 mt-0.5" />}
-                  <div className="flex-1">
-                    <AlertTitle className="mb-1">{alert.title}</AlertTitle>
-                    <AlertDescription className="text-xs">{alert.description}</AlertDescription>
-                    <p className="text-xs text-gray-500 mt-2">{alert.timestamp}</p>
-                  </div>
-                </div>
-              </Alert>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Recent Registrations */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Registrations</CardTitle>
-          <CardDescription>New accounts created this week</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentRegistrations.map((registration) => (
-              <div key={registration.id} className="flex items-center justify-between pb-3 border-b last:border-b-0 hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
-                <div>
-                  <p className="font-medium text-sm">{registration.name}</p>
-                  <p className="text-xs text-gray-600">{registration.role}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{registration.role}</Badge>
-                  <p className="text-xs text-gray-500">{registration.date}</p>
-                </div>
-              </div>
-            ))}
+            {/* Quick Links */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Management</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Link href="/admin/settings">
+                  <Button variant="outline" className="w-full justify-start">
+                    System Settings
+                  </Button>
+                </Link>
+                <Link href="/admin/announcements">
+                  <Button variant="outline" className="w-full justify-start">
+                    Send Announcement
+                  </Button>
+                </Link>
+                <Link href="/admin/reports">
+                  <Button variant="outline" className="w-full justify-start">
+                    View Reports
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
