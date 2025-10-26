@@ -200,8 +200,22 @@ export default function StudentRegistrationsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Student Registrations</h1>
-          <p className="text-gray-600">Manage and approve student registrations</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Registrations</h1>
+          <p className="text-gray-600">Manage and approve registrations</p>
+          <div className="mt-4 flex gap-4">
+            <Button
+              onClick={() => router.push('/admin/registrations/create-student')}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Create Student
+            </Button>
+            <Button
+              onClick={() => router.push('/admin/registrations/create-teacher')}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Create Teacher
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}

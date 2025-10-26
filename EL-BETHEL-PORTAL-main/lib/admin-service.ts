@@ -131,6 +131,89 @@ export async function createTeacher(
   }
 }
 
+export async function createTeacherWithAssignments(
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string,
+  phone: string | undefined,
+  qualification: string | undefined,
+  assignedClasses: string[],
+  assignedSubjects: string[]
+) {
+  try {
+    const fullName = `${firstName} ${lastName}`
+
+    // Step 1: Create Supabase Auth User
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    })
+
+    if (authError) throw authError
+    if (!authData.user) throw new Error("Failed to create user account")
+
+    const userId = authData.user.id
+
+    // Step 2: Create user profile
+    const { error: userError } = await supabase.from("users").insert({
+      id: userId,
+      auth_id: userId,
+      email,
+      full_name: fullName,
+      role: "teacher",
+      phone_number: phone,
+    })
+
+    if (userError) throw userError
+
+    // Step 3: Assign classes and subjects to teacher
+    if (assignedClasses.length > 0 && assignedSubjects.length > 0) {
+      for (const classId of assignedClasses) {
+        for (const subjectId of assignedSubjects) {
+          // Verify that this class-subject combination exists
+          const { data: classSubjectData } = await supabase
+            .from("class_subjects")
+            .select("id")
+            .eq("class_id", classId)
+            .eq("subject_id", subjectId)
+            .single()
+
+          if (classSubjectData) {
+            await supabase
+              .from("class_subjects")
+              .update({ teacher_id: userId })
+              .eq("class_id", classId)
+              .eq("subject_id", subjectId)
+          }
+        }
+      }
+    }
+
+    // Step 4: Store qualification in metadata if available
+    if (qualification) {
+      await supabase
+        .from("users")
+        .update({ metadata: { qualification } })
+        .eq("id", userId)
+    }
+
+    return {
+      success: true,
+      data: {
+        userId,
+        email,
+        fullName,
+        classesAssigned: assignedClasses.length,
+        subjectsAssigned: assignedSubjects.length,
+      },
+    }
+  } catch (error: any) {
+    console.error("Error creating teacher with assignments:", error)
+    throw error
+  }
+}
+
 export async function getAllUsers(role?: string) {
   try {
     let query = supabase.from("users").select("*")
