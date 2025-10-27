@@ -48,7 +48,7 @@ export default function PendingApprovalPage() {
 
         if (studentError) {
           setError('Could not load student information')
-          console.error(studentError)
+          console.error('Error fetching student info:', studentError.message || studentError)
           return
         }
 
