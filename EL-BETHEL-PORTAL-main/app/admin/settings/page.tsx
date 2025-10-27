@@ -157,28 +157,113 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSaveSchoolSettings = () => {
-    toast.success('School settings saved')
+  const saveSettings = async (settingsToSave: Partial<Settings>) => {
+    try {
+      setSaving(true)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        toast.error('Not authenticated')
+        return false
+      }
+
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settingsToSave)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save settings')
+      }
+
+      toast.success('Settings saved successfully')
+      return true
+    } catch (error: any) {
+      console.error('Error saving settings:', error)
+      toast.error(error.message || 'Failed to save settings')
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleSaveAcademicSettings = () => {
-    toast.success('Academic settings saved')
+  const handleSaveSchoolSettings = async () => {
+    await saveSettings({
+      school_name: schoolSettings.schoolName,
+      school_code: schoolSettings.schoolCode,
+      principal_email: schoolSettings.principalEmail,
+      school_phone: schoolSettings.schoolPhone,
+      school_address: schoolSettings.schoolAddress,
+      website: schoolSettings.website,
+    })
   }
 
-  const handleSavePaymentSettings = () => {
-    toast.success('Payment settings saved')
+  const handleSaveAcademicSettings = async () => {
+    await saveSettings({
+      current_session: academicSettings.currentSession,
+      current_term: academicSettings.currentTerm,
+      session_start_date: academicSettings.sessionStartDate,
+      session_end_date: academicSettings.sessionEndDate,
+      result_release_enabled: academicSettings.resultReleaseEnabled,
+      result_download_enabled: academicSettings.resultDownloadEnabled,
+      student_registration_open: academicSettings.studentRegistrationOpen,
+    })
   }
 
-  const handleSaveNotificationSettings = () => {
-    toast.success('Notification settings saved')
+  const handleSavePaymentSettings = async () => {
+    await saveSettings({
+      enable_payments: paymentSettings.enablePayments,
+      fee_reminder_days_before_due: paymentSettings.feeReminderDaysBeforeDue,
+    })
   }
 
-  const handleSaveSystemSettings = () => {
-    toast.success('System settings saved')
+  const handleSaveNotificationSettings = async () => {
+    await saveSettings({
+      email_notifications_enabled: notificationSettings.emailNotificationsEnabled,
+      sms_notifications_enabled: notificationSettings.smsNotificationsEnabled,
+      paystack_webhook_url: notificationSettings.paystackWebhookUrl,
+    })
   }
 
-  const handleTestPaystackConnection = () => {
-    toast.success('Paystack connection verified')
+  const handleSaveSystemSettings = async () => {
+    await saveSettings({
+      maintenance_mode: systemSettings.maintenanceMode,
+      auto_backup_enabled: systemSettings.autoBackupEnabled,
+      backup_time: systemSettings.backupTime,
+      session_timeout: systemSettings.sessionTimeout,
+      max_upload_size: systemSettings.maxUploadSize,
+      enable_two_factor: systemSettings.enableTwoFactor,
+    })
+  }
+
+  const handleTestPaystackConnection = async () => {
+    try {
+      const response = await fetch('/api/payments/paystack/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (response.ok) {
+        toast.success('Paystack connection verified')
+      } else {
+        toast.error('Paystack connection failed')
+      }
+    } catch (error) {
+      toast.error('Failed to test connection')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
