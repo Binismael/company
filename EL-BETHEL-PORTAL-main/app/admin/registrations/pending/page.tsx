@@ -36,6 +36,14 @@ interface PendingStudent {
 
 async function fetchPendingStudents(): Promise<PendingStudent[]> {
   try {
+    // Temporary debug probe
+    const { data: probeData, error: probeError } = await supabase
+      .from('students')
+      .select('*')
+      .limit(1)
+    console.log('data:', probeData)
+    console.error('err:', probeError?.message, probeError?.details, probeError)
+
     const { data, error } = await supabase
       .from('students')
       .select('*')
