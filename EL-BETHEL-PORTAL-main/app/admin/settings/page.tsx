@@ -364,9 +364,9 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <Button onClick={handleSaveSchoolSettings} className="gap-2">
+              <Button onClick={handleSaveSchoolSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -494,9 +494,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button onClick={handleSaveAcademicSettings} className="gap-2">
+              <Button onClick={handleSaveAcademicSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -635,9 +635,9 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <Button onClick={handleSaveNotificationSettings} className="gap-2">
+              <Button onClick={handleSaveNotificationSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -722,9 +722,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button onClick={handleSaveSystemSettings} className="gap-2">
+              <Button onClick={handleSaveSystemSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
