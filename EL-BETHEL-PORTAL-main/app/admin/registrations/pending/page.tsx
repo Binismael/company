@@ -34,6 +34,27 @@ interface PendingStudent {
   approved: boolean
 }
 
+async function fetchPendingStudents(): Promise<PendingStudent[]> {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('approved', false)
+
+    if (error) {
+      console.error('Supabase error:', error)
+      toast.error('Failed to load pending registrations')
+      return []
+    }
+
+    return (data as PendingStudent[]) || []
+  } catch (err) {
+    console.error('Fetch error:', err)
+    toast.error('Unexpected error loading pending students')
+    return []
+  }
+}
+
 export default function PendingStudentsPage() {
   const [students, setStudents] = useState<PendingStudent[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,67 +62,33 @@ export default function PendingStudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<PendingStudent | null>(null)
 
   useEffect(() => {
-    fetchPendingStudents()
-  }, [])
-
-  const fetchPendingStudents = async () => {
-    try {
+    const load = async () => {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('students')
-        .select(`
-          id,
-          user_id,
-          first_name,
-          last_name,
-          phone,
-          gender,
-          class,
-          section,
-          guardian_name,
-          guardian_phone,
-          guardian_email,
-          reg_number,
-          created_at,
-          approved
-        `)
-        .eq('approved', false)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Supabase error details:', error?.message, error?.details, error)
-        toast.error(getErrorMessage(error, 'Failed to load pending registrations'))
-        return
-      }
-
-      // Fetch emails from users table
-      if (data && data.length > 0) {
-        const userIds = data.map(s => s.user_id)
+      const base = await fetchPendingStudents()
+      if (base.length > 0) {
+        const userIds = base.map((s) => s.user_id)
         const { data: users, error: userError } = await supabase
           .from('users')
           .select('id, email')
           .in('id', userIds)
 
         if (!userError && users) {
-          const userMap = new Map(users.map(u => [u.id, u.email]))
-          const enrichedData = data.map(student => ({
+          const userMap = new Map(users.map((u) => [u.id, u.email]))
+          const enriched = base.map((student) => ({
             ...student,
-            email: userMap.get(student.user_id) || 'N/A'
+            email: userMap.get(student.user_id) || 'N/A',
           }))
-          setStudents(enrichedData)
+          setStudents(enriched)
         } else {
-          setStudents(data)
+          setStudents(base)
         }
       } else {
-        setStudents(data || [])
+        setStudents(base)
       }
-    } catch (error) {
-      console.error('Error fetching students:', error)
-      toast.error(getErrorMessage(error, 'An error occurred'))
-    } finally {
       setLoading(false)
     }
-  }
+    load()
+  }, [])
 
   const approveStudent = async (studentId: string) => {
     try {
