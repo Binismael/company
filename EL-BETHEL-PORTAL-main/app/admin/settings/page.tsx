@@ -512,14 +512,14 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">Keep your payment keys confidential. Never share these with unauthorized persons.</p>
+              <p className="text-sm text-amber-900">Payment keys are configured via environment variables for security. Contact your system administrator to update Paystack credentials.</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Payment Gateway Configuration</CardTitle>
-              <CardDescription>Paystack payment processing settings</CardDescription>
+              <CardDescription>Payment processing settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -536,79 +536,35 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Paystack Public Key *</label>
+                <label className="text-sm font-medium">Fee Reminder (Days Before Due)</label>
                 <Input
-                  type="password"
-                  value={paymentSettings.paystackPublicKey}
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={paymentSettings.feeReminderDaysBeforeDue}
                   onChange={(e) =>
                     setPaymentSettings({
                       ...paymentSettings,
-                      paystackPublicKey: e.target.value,
+                      feeReminderDaysBeforeDue: parseInt(e.target.value),
                     })
                   }
                   className="mt-2"
                 />
-                <p className="text-xs text-gray-600 mt-2">Get from your Paystack dashboard</p>
+                <p className="text-xs text-gray-600 mt-2">Number of days before due date to send reminders</p>
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Paystack Secret Key *</label>
-                <Input
-                  type="password"
-                  value={paymentSettings.paystackSecretKey}
-                  onChange={(e) =>
-                    setPaymentSettings({
-                      ...paymentSettings,
-                      paystackSecretKey: e.target.value,
-                    })
-                  }
-                  className="mt-2"
-                />
-                <p className="text-xs text-gray-600 mt-2">Keep this key secret and secure</p>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-medium text-blue-900 mb-2">Paystack Configuration</p>
+                <p className="text-xs text-blue-800">Paystack API keys are securely configured in your deployment environment. To update your keys, contact your system administrator or deploy with updated environment variables.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Fee Reminder (Days Before)</label>
-                  <Input
-                    type="number"
-                    value={paymentSettings.feeReminderDaysBeforeDue}
-                    onChange={(e) =>
-                      setPaymentSettings({
-                        ...paymentSettings,
-                        feeReminderDaysBeforeDue: parseInt(e.target.value),
-                      })
-                    }
-                    className="mt-2"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={handleTestPaystackConnection} variant="outline" className="w-full gap-2">
-                    <Zap className="w-4 h-4" />
-                    Test Connection
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-red-50 border-red-200">
-                <div>
-                  <p className="font-medium text-red-900">Auto-block Unpaid Students</p>
-                  <p className="text-sm text-red-700">Prevent portal access if fees unpaid</p>
-                </div>
-                <Switch
-                  checked={paymentSettings.autoBlockUnpaidStudents}
-                  onCheckedChange={(val) =>
-                    setPaymentSettings({
-                      ...paymentSettings,
-                      autoBlockUnpaidStudents: val,
-                    })
-                  }
-                />
-              </div>
-
-              <Button onClick={handleSavePaymentSettings} className="gap-2">
+              <Button
+                onClick={handleSavePaymentSettings}
+                disabled={saving}
+                className="gap-2"
+              >
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
