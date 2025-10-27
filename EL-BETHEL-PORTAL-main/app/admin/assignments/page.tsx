@@ -232,12 +232,9 @@ export default function AssignmentsPage() {
                       <SelectValue placeholder="Select class" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SS1A">SS1A</SelectItem>
-                      <SelectItem value="SS1B">SS1B</SelectItem>
-                      <SelectItem value="SS2A">SS2A</SelectItem>
-                      <SelectItem value="SS2B">SS2B</SelectItem>
-                      <SelectItem value="SS3A">SS3A</SelectItem>
-                      <SelectItem value="SS3B">SS3B</SelectItem>
+                      {classes.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
