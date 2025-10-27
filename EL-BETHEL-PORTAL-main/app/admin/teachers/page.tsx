@@ -226,31 +226,28 @@ export default function TeachersPage() {
               filteredTeachers.map((teacher) => (
                 <div key={teacher.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50 transition">
                   <Avatar>
-                    <AvatarFallback>{teacher.name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>{teacher.full_name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <p className="font-semibold text-gray-900">{teacher.name}</p>
-                        <p className="text-sm text-gray-600">{teacher.department} Department</p>
+                        <p className="font-semibold text-gray-900">{teacher.full_name}</p>
+                        <p className="text-sm text-gray-600">{teacher.department || 'Not specified'}</p>
                       </div>
                       {getStatusBadge(teacher.status)}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4" />
-                        {teacher.email}
+                        {teacher.email || 'No email'}
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        Last active: {teacher.lastActive}
+                        Joined: {teacher.created_at ? new Date(teacher.created_at).toLocaleDateString() : 'N/A'}
                       </div>
                       <div className="flex items-center gap-2">
                         <Award className="w-4 h-4" />
-                        {teacher.examsCreated} exams created
-                      </div>
-                      <div>
-                        <strong>Assigned Classes:</strong> {teacher.assignedClasses.join(', ')}
+                        ID: {teacher.employee_id || 'Not assigned'}
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">
