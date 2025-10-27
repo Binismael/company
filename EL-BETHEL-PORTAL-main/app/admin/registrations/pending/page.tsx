@@ -36,28 +36,37 @@ interface PendingStudent {
 
 async function fetchPendingStudents(): Promise<PendingStudent[]> {
   try {
-    // Temporary debug probe
+    // Debug probe: check table access and RLS
+    console.log('🔍 Checking students table...')
     const { data: probeData, error: probeError } = await supabase
       .from('students')
       .select('*')
-      .limit(1)
-    console.log('data:', probeData)
-    console.error('err:', probeError?.message, probeError?.details, probeError)
+      .limit(5)
+    console.log('📦 Raw data:', probeData)
+    console.log('⚠️ Error info:', probeError)
+    if (!probeData || probeData.length === 0) {
+      toast.warning('No student records found — check table name or RLS.')
+    }
 
+    // Actual fetch for pending approvals
     const { data, error } = await supabase
       .from('students')
       .select('*')
       .eq('approved', false)
 
     if (error) {
-      console.error('Supabase error:', error)
-      toast.error('Failed to load pending registrations')
+      toast.error('Supabase error while loading students')
+      console.error('Supabase error details:', {
+        message: error.message,
+        details: (error as any)?.details,
+        hint: (error as any)?.hint,
+      })
       return []
     }
 
     return (data as PendingStudent[]) || []
   } catch (err) {
-    console.error('Fetch error:', err)
+    console.error('❌ Fetch error:', err)
     toast.error('Unexpected error loading pending students')
     return []
   }
