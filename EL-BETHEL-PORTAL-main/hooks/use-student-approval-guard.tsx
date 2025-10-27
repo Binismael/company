@@ -43,7 +43,7 @@ export function useStudentApprovalGuard(): UseStudentApprovalGuardResult {
           .single()
 
         if (studentError) {
-          console.error('Error fetching student approval status:', studentError)
+          console.error('Error fetching student approval status:', studentError.message || studentError)
           setError('Failed to verify account status')
           setIsLoading(false)
           return
