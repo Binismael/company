@@ -149,7 +149,7 @@ export default function LoginPage() {
         <div className="text-center mb-12">
           <div className="flex justify-center mb-4">
             <img
-              src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
+              src="https://cdn.builder.io/api/v1/image/assets%2Fa6537ca4bb2f481ba022e7b35be0f036%2F5e0c30c113214b4bb9e43c74d6d6b7cc?format=webp&width=800"
               alt="El Bethel Academy Logo"
               className="h-24 w-24"
             />
@@ -214,7 +214,7 @@ export default function LoginPage() {
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
               <img
-                src="https://cdn.builder.io/api/v1/image/assets%2F291857ff22134997b4885aff7248bbb5%2Fee4263e9927d42dba9246b8809a43ad7?format=webp&width=800"
+                src="https://cdn.builder.io/api/v1/image/assets%2Fa6537ca4bb2f481ba022e7b35be0f036%2F5e0c30c113214b4bb9e43c74d6d6b7cc?format=webp&width=800"
                 alt="El Bethel Academy Logo"
                 className="h-12 w-12"
               />
