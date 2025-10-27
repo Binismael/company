@@ -239,7 +239,7 @@ export default function AssignmentsPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Subject *</label>
+                  <label className="text-sm font-medium">Subject</label>
                   <Select value={newAssignment.subject} onValueChange={(val) =>
                     setNewAssignment({ ...newAssignment, subject: val })
                   }>
@@ -247,11 +247,9 @@ export default function AssignmentsPage() {
                       <SelectValue placeholder="Select subject" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Mathematics">Mathematics</SelectItem>
-                      <SelectItem value="English">English</SelectItem>
-                      <SelectItem value="Biology">Biology</SelectItem>
-                      <SelectItem value="Chemistry">Chemistry</SelectItem>
-                      <SelectItem value="Physics">Physics</SelectItem>
+                      {subjects.map((subj) => (
+                        <SelectItem key={subj.id} value={subj.id}>{subj.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -302,23 +300,9 @@ export default function AssignmentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                <SelectItem value="SS1A">SS1A</SelectItem>
-                <SelectItem value="SS1B">SS1B</SelectItem>
-                <SelectItem value="SS2A">SS2A</SelectItem>
-                <SelectItem value="SS2B">SS2B</SelectItem>
-                <SelectItem value="SS3A">SS3A</SelectItem>
-                <SelectItem value="SS3B">SS3B</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
