@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,42 +9,69 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertCircle, Save, Database, Bell, Lock, Zap } from 'lucide-react'
+import { AlertCircle, Save, Database, Bell, Lock, Zap, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase-client'
+
+interface Settings {
+  school_name?: string
+  school_code?: string
+  principal_email?: string
+  school_phone?: string
+  school_address?: string
+  website?: string
+  current_session?: string
+  current_term?: string
+  session_start_date?: string
+  session_end_date?: string
+  result_release_enabled?: boolean
+  result_download_enabled?: boolean
+  student_registration_open?: boolean
+  enable_payments?: boolean
+  fee_reminder_days_before_due?: number
+  email_notifications_enabled?: boolean
+  sms_notifications_enabled?: boolean
+  paystack_webhook_url?: string
+  maintenance_mode?: boolean
+  auto_backup_enabled?: boolean
+  backup_time?: string
+  session_timeout?: number
+  max_upload_size?: number
+  enable_two_factor?: boolean
+}
 
 export default function SettingsPage() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
   const [schoolSettings, setSchoolSettings] = useState({
-    schoolName: 'El Bethel Academy',
-    schoolCode: 'EBA-2024',
-    principalEmail: 'principal@elbethel.edu',
-    schoolPhone: '+234 803 123 4567',
-    schoolAddress: '123 Education Lane, Lagos, Nigeria',
-    website: 'www.elbethel.edu',
+    schoolName: '',
+    schoolCode: '',
+    principalEmail: '',
+    schoolPhone: '',
+    schoolAddress: '',
+    website: '',
   })
 
   const [academicSettings, setAcademicSettings] = useState({
-    currentSession: '2023/2024',
-    currentTerm: 'First Term',
-    sessionStartDate: '2023-09-01',
-    sessionEndDate: '2024-06-30',
+    currentSession: '',
+    currentTerm: '',
+    sessionStartDate: '',
+    sessionEndDate: '',
     resultReleaseEnabled: true,
     resultDownloadEnabled: true,
     studentRegistrationOpen: true,
   })
 
   const [paymentSettings, setPaymentSettings] = useState({
-    paystackPublicKey: 'pk_live_xxxxxxxxx',
-    paystackSecretKey: 'sk_live_xxxxxxxxx',
     enablePayments: true,
-    autoBlockUnpaidStudents: false,
     feeReminderDaysBeforeDue: 7,
   })
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotificationsEnabled: true,
     smsNotificationsEnabled: false,
-    paystackWebhookUrl: 'https://yourdomain.com/webhook',
-    smsProvider: 'none',
+    paystackWebhookUrl: '',
   })
 
   const [systemSettings, setSystemSettings] = useState({
@@ -55,6 +82,80 @@ export default function SettingsPage() {
     maxUploadSize: 10,
     enableTwoFactor: false,
   })
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        toast.error('Not authenticated')
+        return
+      }
+
+      const response = await fetch('/api/admin/settings', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings')
+      }
+
+      const { settings } = await response.json()
+
+      if (settings) {
+        setSchoolSettings({
+          schoolName: settings.school_name || '',
+          schoolCode: settings.school_code || '',
+          principalEmail: settings.principal_email || '',
+          schoolPhone: settings.school_phone || '',
+          schoolAddress: settings.school_address || '',
+          website: settings.website || '',
+        })
+
+        setAcademicSettings({
+          currentSession: settings.current_session || '',
+          currentTerm: settings.current_term || '',
+          sessionStartDate: settings.session_start_date || '',
+          sessionEndDate: settings.session_end_date || '',
+          resultReleaseEnabled: settings.result_release_enabled ?? true,
+          resultDownloadEnabled: settings.result_download_enabled ?? true,
+          studentRegistrationOpen: settings.student_registration_open ?? true,
+        })
+
+        setPaymentSettings({
+          enablePayments: settings.enable_payments ?? true,
+          feeReminderDaysBeforeDue: settings.fee_reminder_days_before_due || 7,
+        })
+
+        setNotificationSettings({
+          emailNotificationsEnabled: settings.email_notifications_enabled ?? true,
+          smsNotificationsEnabled: settings.sms_notifications_enabled ?? false,
+          paystackWebhookUrl: settings.paystack_webhook_url || '',
+        })
+
+        setSystemSettings({
+          maintenanceMode: settings.maintenance_mode ?? false,
+          autoBackupEnabled: settings.auto_backup_enabled ?? true,
+          backupTime: settings.backup_time || '02:00',
+          sessionTimeout: settings.session_timeout || 30,
+          maxUploadSize: settings.max_upload_size || 10,
+          enableTwoFactor: settings.enable_two_factor ?? false,
+        })
+      }
+    } catch (error: any) {
+      console.error('Error loading settings:', error)
+      toast.error('Failed to load settings')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSaveSchoolSettings = () => {
     toast.success('School settings saved')
