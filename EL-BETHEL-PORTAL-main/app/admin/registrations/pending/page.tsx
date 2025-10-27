@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/error-utils'
 import {
   Check,
   X,
@@ -68,8 +69,8 @@ export default function PendingStudentsPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        toast.error('Failed to load pending registrations')
-        console.error(error)
+        console.error('Supabase error details:', error?.message, error?.details, error)
+        toast.error(getErrorMessage(error, 'Failed to load pending registrations'))
         return
       }
 
@@ -96,7 +97,7 @@ export default function PendingStudentsPage() {
       }
     } catch (error) {
       console.error('Error fetching students:', error)
-      toast.error('An error occurred')
+      toast.error(getErrorMessage(error, 'An error occurred'))
     } finally {
       setLoading(false)
     }
@@ -112,7 +113,8 @@ export default function PendingStudentsPage() {
         .eq('id', studentId)
 
       if (error) {
-        toast.error('Failed to approve student')
+        console.error('Supabase error details:', error?.message, error?.details, error)
+        toast.error(getErrorMessage(error, 'Failed to approve student'))
         return
       }
 
@@ -134,7 +136,7 @@ export default function PendingStudentsPage() {
       toast.success('Student approved successfully')
     } catch (error) {
       console.error('Error approving student:', error)
-      toast.error('An error occurred')
+      toast.error(getErrorMessage(error, 'An error occurred'))
     } finally {
       setApproving((prev) => ({ ...prev, [studentId]: false }))
     }
@@ -168,7 +170,8 @@ export default function PendingStudentsPage() {
         .eq('id', studentId)
 
       if (error) {
-        toast.error('Failed to reject student')
+        console.error('Supabase error details:', error?.message, error?.details, error)
+        toast.error(getErrorMessage(error, 'Failed to reject student'))
         return
       }
 
@@ -176,7 +179,7 @@ export default function PendingStudentsPage() {
       toast.success('Student registration marked as rejected')
     } catch (error) {
       console.error('Error rejecting student:', error)
-      toast.error('An error occurred')
+      toast.error(getErrorMessage(error, 'An error occurred'))
     } finally {
       setApproving((prev) => ({ ...prev, [studentId]: false }))
     }
