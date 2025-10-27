@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,77 +23,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, FileUp, Download, Eye, Edit, Trash2, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Plus, FileUp, Download, Eye, Edit, Trash2, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase-client'
 
 interface Assignment {
   id: string
   title: string
-  class: string
-  subject: string
-  teacher: string
-  dueDate: string
-  submissions: number
-  totalStudents: number
-  status: 'active' | 'completed' | 'overdue'
-  createdDate: string
+  description?: string
+  due_date: string
+  class_id?: string
+  subject_id?: string
+  teacher_id?: string
+  created_at: string
+  status?: string
 }
 
 export default function AssignmentsPage() {
-  const [assignments, setAssignments] = useState<Assignment[]>([
-    {
-      id: '1',
-      title: 'Chapter 5-6 Mathematics Exercise',
-      class: 'SS2A',
-      subject: 'Mathematics',
-      teacher: 'Mrs. Adeyemi',
-      dueDate: '2024-01-25',
-      submissions: 35,
-      totalStudents: 45,
-      status: 'active',
-      createdDate: '2024-01-15',
-    },
-    {
-      id: '2',
-      title: 'Literature Essay - "Things Fall Apart"',
-      class: 'SS3B',
-      subject: 'English',
-      teacher: 'Mr. Okafor',
-      dueDate: '2024-01-22',
-      submissions: 40,
-      totalStudents: 42,
-      status: 'active',
-      createdDate: '2024-01-12',
-    },
-    {
-      id: '3',
-      title: 'Biology Practical Report',
-      class: 'SS1A',
-      subject: 'Biology',
-      teacher: 'Dr. Uzoh',
-      dueDate: '2024-01-18',
-      submissions: 38,
-      totalStudents: 40,
-      status: 'overdue',
-      createdDate: '2024-01-10',
-    },
-    {
-      id: '4',
-      title: 'Chemistry Calculations',
-      class: 'SS2B',
-      subject: 'Chemistry',
-      teacher: 'Prof. Nwosu',
-      dueDate: '2024-01-20',
-      submissions: 42,
-      totalStudents: 43,
-      status: 'completed',
-      createdDate: '2024-01-08',
-    },
-  ])
+  const [loading, setLoading] = useState(true)
+  const [assignments, setAssignments] = useState<Assignment[]>([])
 
   const [filterClass, setFilterClass] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [classes, setClasses] = useState<any[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
   const [newAssignment, setNewAssignment] = useState({
     title: '',
     class: '',
@@ -102,42 +56,113 @@ export default function AssignmentsPage() {
     description: '',
   })
 
+  useEffect(() => {
+    loadAssignmentsAndData()
+  }, [])
+
+  const loadAssignmentsAndData = async () => {
+    try {
+      setLoading(true)
+
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (assignmentsError) throw assignmentsError
+
+      setAssignments(assignmentsData || [])
+
+      const { data: classesData } = await supabase
+        .from('classes')
+        .select('id, name')
+        .order('name')
+
+      setClasses(classesData || [])
+
+      const { data: subjectsData } = await supabase
+        .from('subjects')
+        .select('id, name, code')
+        .order('name')
+
+      setSubjects(subjectsData || [])
+    } catch (error: any) {
+      console.error('Error loading assignments:', error)
+      toast.error('Failed to load assignments')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredAssignments = assignments.filter((assignment) => {
-    const matchesClass = filterClass === 'all' || assignment.class === filterClass
-    const matchesStatus = filterStatus === 'all' || assignment.status === filterStatus
-    const matchesSearch =
-      assignment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.subject.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesClass && matchesStatus && matchesSearch
+    const matchesClass = filterClass === 'all' || assignment.class_id === filterClass
+    const matchesSearch = assignment.title.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchesClass && matchesSearch
   })
 
-  const handleCreateAssignment = () => {
-    if (!newAssignment.title || !newAssignment.class || !newAssignment.subject || !newAssignment.dueDate) {
+  const handleCreateAssignment = async () => {
+    if (!newAssignment.title || !newAssignment.class || !newAssignment.dueDate) {
       toast.error('Please fill in all required fields')
       return
     }
 
-    const assignment: Assignment = {
-      id: String(assignments.length + 1),
-      title: newAssignment.title,
-      class: newAssignment.class,
-      subject: newAssignment.subject,
-      teacher: 'Current Teacher',
-      dueDate: newAssignment.dueDate,
-      submissions: 0,
-      totalStudents: 40,
-      status: 'active',
-      createdDate: new Date().toISOString().split('T')[0],
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('Not authenticated')
+        return
+      }
 
-    setAssignments([assignment, ...assignments])
-    setNewAssignment({ title: '', class: '', subject: '', dueDate: '', description: '' })
-    toast.success('Assignment created successfully')
+      const { data, error } = await supabase
+        .from('assignments')
+        .insert({
+          title: newAssignment.title,
+          description: newAssignment.description,
+          due_date: newAssignment.dueDate,
+          class_id: newAssignment.class,
+          subject_id: newAssignment.subject || null,
+          teacher_id: user.id,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setAssignments([data, ...assignments])
+      setNewAssignment({ title: '', class: '', subject: '', dueDate: '', description: '' })
+      toast.success('Assignment created successfully')
+    } catch (error: any) {
+      console.error('Error creating assignment:', error)
+      toast.error(error.message || 'Failed to create assignment')
+    }
   }
 
-  const handleDeleteAssignment = (id: string) => {
-    setAssignments(assignments.filter((a) => a.id !== id))
-    toast.success('Assignment deleted')
+  const handleDeleteAssignment = async (id: string) => {
+    if (!confirm('Delete this assignment?')) return
+
+    try {
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      setAssignments(assignments.filter((a) => a.id !== id))
+      toast.success('Assignment deleted')
+    } catch (error: any) {
+      console.error('Error deleting assignment:', error)
+      toast.error(error.message || 'Failed to delete assignment')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   const getStatusIcon = (status: string) => {
