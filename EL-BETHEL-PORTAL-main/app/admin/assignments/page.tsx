@@ -337,31 +337,29 @@ export default function AssignmentsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAssignments.map((assignment) => (
+                  filteredAssignments.map((assignment) => {
+                    const classItem = classes.find((c) => c.id === assignment.class_id)
+                    const subjectItem = subjects.find((s) => s.id === assignment.subject_id)
+                    const dueDate = new Date(assignment.due_date).toLocaleDateString()
+
+                    return (
                     <TableRow key={assignment.id}>
                       <TableCell className="font-medium">{assignment.title}</TableCell>
-                      <TableCell>{assignment.class}</TableCell>
-                      <TableCell>{assignment.subject}</TableCell>
-                      <TableCell>{assignment.teacher}</TableCell>
-                      <TableCell>{assignment.dueDate}</TableCell>
+                      <TableCell>{classItem?.name || 'N/A'}</TableCell>
+                      <TableCell>{subjectItem?.name || 'N/A'}</TableCell>
+                      <TableCell>View details</TableCell>
+                      <TableCell>{dueDate}</TableCell>
                       <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            {assignment.submissions}/{assignment.totalStudents}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {submissionRate(assignment.submissions, assignment.totalStudents)}%
-                          </div>
-                        </div>
+                        <div className="text-sm text-gray-600">N/A</div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                      <TableCell><Badge className="bg-blue-100 text-blue-800">Active</Badge></TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            title="View submissions"
+                            title="View details"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -385,7 +383,8 @@ export default function AssignmentsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
