@@ -57,7 +57,7 @@ export default function LoginPage() {
         const { data: studentUser, error: userError } = await supabase
           .from('users')
           .select('email')
-          .eq('id', student.user_id)
+          .or(`auth_id.eq.${student.user_id},id.eq.${student.user_id}`)
           .single()
 
         if (userError || !studentUser) {
@@ -78,8 +78,8 @@ export default function LoginPage() {
       if (authData.user) {
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('id, email, full_name, role, created_at')
-          .eq('id', authData.user.id)
+          .select('id, auth_id, email, full_name, role, created_at')
+          .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
           .single()
 
         if (userError && userError.code !== 'PGRST116') {
