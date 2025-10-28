@@ -90,12 +90,12 @@ export default function PendingApprovalPage() {
       // Check approval status
       const { data: student } = await supabase
         .from('students')
-        .select('approved')
+        .select('*')
         .eq('user_id', user.id)
         .single()
 
-      if (student?.approved) {
-        // Student has been approved, redirect to dashboard
+      const approvedFlag = Boolean((student as any)?.approved ?? (student as any)?.is_approved ?? ((student as any)?.status === 'approved'))
+      if (approvedFlag) {
         router.push('/student-dashboard')
       } else {
         setError('Your account is still pending admin approval. Please check back later.')
