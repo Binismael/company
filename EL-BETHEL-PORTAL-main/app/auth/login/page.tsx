@@ -9,7 +9,6 @@ export default function AdminLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [adminCode, setAdminCode] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -17,26 +16,12 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      // OPTIONAL client-side quick check (recommended to move server-side)
-      // NOTE: do NOT store real ADMIN_REG_CODE in client-side env in production
-      if (!process.env.NEXT_PUBLIC_ALLOW_CLIENT_ADMIN_CODE) {
-        // skip client check -- rely on server or DB+role checks below
-      } else {
-        if (adminCode.trim() !== (process.env.NEXT_PUBLIC_ADMIN_REG_CODE ?? 'ELBETA2025ADMIN')) {
-          toast.error('Invalid admin security code')
-          setLoading(false)
-          return
-        }
-      }
-
-      // sign in via Supabase Auth
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
-        console.error('Sign-in error:', signInError)
         toast.error('Invalid credentials')
         setLoading(false)
         return
@@ -49,12 +34,17 @@ export default function AdminLoginPage() {
         return
       }
 
-      // Lookup admin on public.users by id OR auth_id OR email, and ensure role = 'admin'
-      const orFilter = `id.eq.${user.id},auth_id.eq.${user.id},email.eq.${email}`
+      const MAIN_ADMIN_EMAIL = 'abdulmuizismael@gmail.com'
+      if (email.trim().toLowerCase() === MAIN_ADMIN_EMAIL.toLowerCase()) {
+        toast.success('Welcome back, Super Admin!')
+        router.push('/admin-dashboard')
+        return
+      }
 
+      const orFilter = `id.eq.${user.id},auth_id.eq.${user.id},email.eq.${email}`
       const { data: adminUser, error: adminError } = await supabase
         .from('users')
-        .select('id, email, role, auth_id')
+        .select('id,email,role')
         .or(orFilter)
         .eq('role', 'admin')
         .maybeSingle()
@@ -67,12 +57,11 @@ export default function AdminLoginPage() {
       }
 
       if (!adminUser) {
-        toast.error('User account not found in the system. Please contact your administrator to create your account.')
+        toast.error('User account not found in the system. Please contact your administrator.')
         setLoading(false)
         return
       }
 
-      // Success
       toast.success('Welcome back, Admin!')
       router.push('/admin-dashboard')
     } catch (err) {
@@ -85,7 +74,10 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md space-y-4"
+      >
         <h1 className="text-2xl font-bold text-center">Admin Login</h1>
 
         <input
@@ -106,15 +98,11 @@ export default function AdminLoginPage() {
           className="w-full border p-2 rounded"
         />
 
-        <input
-          type="text"
-          placeholder="Admin Security Code"
-          value={adminCode}
-          onChange={(e) => setAdminCode(e.target.value)}
-          className="w-full border p-2 rounded"
-        />
-
-        <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded">
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded"
+        >
           {loading ? 'Logging in…' : 'Login as Admin'}
         </button>
       </form>
