@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -33,15 +34,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
-    const { data: adminCheck } = await supabase
-      .from('admins')
-      .select('id')
-      .eq('user_id', userData.user.id)
-      .single()
+    // Super admin email bypass or role check in users table
+    const MAIN_ADMIN_EMAIL = process.env.NEXT_PUBLIC_MAIN_ADMIN_EMAIL || 'abdulmuizismael@gmail.com'
+    if (userData.user.email?.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
+      const { data: roleData } = await supabase
+        .from('users')
+        .select('role')
+        .or(`id.eq.${userData.user.id},auth_id.eq.${userData.user.id},email.eq.${userData.user.email}`)
+        .maybeSingle()
 
-    if (!adminCheck) {
-      return NextResponse.json({ error: 'User is not an admin' }, { status: 403 })
+      if (roleData?.role !== 'admin') {
+        return NextResponse.json({ error: 'User is not an admin' }, { status: 403 })
+      }
     }
 
     // Update student approval status
