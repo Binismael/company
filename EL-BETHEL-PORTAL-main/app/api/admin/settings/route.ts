@@ -20,14 +20,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_id', user.id)
-      .single()
+    const MAIN_ADMIN_EMAIL = process.env.NEXT_PUBLIC_MAIN_ADMIN_EMAIL || 'abdulmuizismael@gmail.com'
+    if (user.email?.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .or(`id.eq.${user.id},auth_id.eq.${user.id},email.eq.${user.email}`)
+        .maybeSingle()
 
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      if (userData?.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     const { data: settings, error: settingsError } = await supabase
@@ -60,14 +63,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('auth_id', user.id)
-      .single()
+    const MAIN_ADMIN_EMAIL = process.env.NEXT_PUBLIC_MAIN_ADMIN_EMAIL || 'abdulmuizismael@gmail.com'
+    if (user.email?.toLowerCase() !== MAIN_ADMIN_EMAIL.toLowerCase()) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .or(`id.eq.${user.id},auth_id.eq.${user.id},email.eq.${user.email}`)
+        .maybeSingle()
 
-    if (userData?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      if (userData?.role !== 'admin') {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     const body = await request.json()
