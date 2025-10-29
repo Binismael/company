@@ -78,7 +78,7 @@ export default function LoginPage() {
       if (authError) throw new Error(authError.message)
 
       if (authData.user) {
-        const { data: userData, error: userError } = await supabase
+        let { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, auth_id, email, full_name, role, created_at')
           .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
@@ -87,6 +87,27 @@ export default function LoginPage() {
         if (userError && userError.code !== 'PGRST116') {
           console.error('Database error fetching user:', userError)
           throw new Error('Failed to fetch user profile: ' + userError.message)
+        }
+
+        if (!userData) {
+          const mainAdminEmail = (process.env.NEXT_PUBLIC_MAIN_ADMIN_EMAIL || '').toLowerCase()
+          if (loginEmail.toLowerCase() === mainAdminEmail) {
+            const { data: inserted, error: insertError } = await supabase
+              .from('users')
+              .insert([
+                {
+                  auth_id: authData.user.id,
+                  email: loginEmail,
+                  full_name: (authData.user.user_metadata?.full_name as string) || loginEmail,
+                  role: 'admin',
+                },
+              ])
+              .select('id, auth_id, email, full_name, role, created_at')
+              .single()
+            if (!insertError && inserted) {
+              userData = inserted
+            }
+          }
         }
 
         if (!userData) {
