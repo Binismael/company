@@ -79,7 +79,7 @@ export default function LoginPage() {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, auth_id, email, full_name, role, created_at')
-          .eq('auth_id', authData.user.id)
+          .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
           .single()
 
         if (userError && userError.code !== 'PGRST116') {
