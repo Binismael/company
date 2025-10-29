@@ -58,7 +58,7 @@ export default function ParentDashboard() {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', authUser.id)
+          .or(`auth_id.eq.${authUser.id},id.eq.${authUser.id}`)
           .single()
 
         if (userError || userData.role !== 'parent') {
