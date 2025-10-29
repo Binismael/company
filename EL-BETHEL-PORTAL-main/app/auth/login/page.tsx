@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,8 @@ import { findStudentByRegNumber } from '@/lib/registration-utils'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isAdminLogin = searchParams.get('admin') === '1'
   const [loginType, setLoginType] = useState<'email' | 'reg-number'>('email')
   const [email, setEmail] = useState('')
   const [regNumber, setRegNumber] = useState('')
@@ -89,6 +91,11 @@ export default function LoginPage() {
 
         if (!userData) {
           throw new Error('User account not found in the system. Please contact your administrator to create your account.')
+        }
+
+        if (isAdminLogin && userData.role !== 'admin') {
+          await supabase.auth.signOut()
+          throw new Error('This page is for admins only')
         }
 
         sessionStorage.setItem('user', JSON.stringify({
@@ -219,9 +226,9 @@ export default function LoginPage() {
                 className="h-12 w-12"
               />
             </div>
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
+            <CardTitle className="text-2xl">{isAdminLogin ? 'Admin Login' : 'Welcome Back'}</CardTitle>
             <CardDescription>
-              Sign in to access your personalized portal
+              {isAdminLogin ? 'Admins only' : 'Sign in to access your personalized portal'}
             </CardDescription>
           </CardHeader>
           <CardContent>
