@@ -103,7 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("id", userId)
+        .or(`auth_id.eq.${userId},id.eq.${userId}`)
+        .limit(1)
 
       if (error) {
         console.error("Error fetching user from users table:", error.message)
