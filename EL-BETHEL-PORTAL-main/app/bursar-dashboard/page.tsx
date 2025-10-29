@@ -70,7 +70,7 @@ export default function BursarDashboard() {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', authUser.id)
+          .or(`auth_id.eq.${authUser.id},id.eq.${authUser.id}`)
           .single()
 
         if (userError || userData.role !== 'bursar') {
