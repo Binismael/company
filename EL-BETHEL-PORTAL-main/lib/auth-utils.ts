@@ -96,7 +96,7 @@ export const signIn = async (data: SignInData) => {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', authData.user.id)
+        .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
         .single()
 
       if (userError) throw userError
