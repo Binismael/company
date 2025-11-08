@@ -13,7 +13,17 @@ if (missingEnv) {
 // Export a safe default that doesn't throw on import. If envs are missing, any access
 // to Supabase methods will throw with a clear error message.
 export const supabase: SupabaseClient = !missingEnv
-  ? createClient(url!, anon!)
+  ? createClient(url!, anon!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: true,
+      },
+      global: {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+          fetch(input, { ...init, cache: 'no-store', mode: 'cors' }),
+      },
+    })
   : (new Proxy(
       {},
       {
