@@ -105,11 +105,12 @@ export default function LoginPage() {
           .from('users')
           .select('id, auth_id, email, full_name, role, created_at')
           .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
-          .single()
+          .maybeSingle()
 
-        if (userError && userError.code !== 'PGRST116') {
-          console.error('Database error fetching user:', userError)
-          throw new Error('Failed to fetch user profile: ' + userError.message)
+        if (userError) {
+          const msg = (userError as any)?.message || 'Unknown error'
+          console.error('Database error fetching user:', msg)
+          throw new Error('Failed to fetch user profile: ' + msg)
         }
 
         if (!userData) {
@@ -126,7 +127,7 @@ export default function LoginPage() {
                 },
               ])
               .select('id, auth_id, email, full_name, role, created_at')
-              .single()
+              .maybeSingle()
             if (!insertError && inserted) {
               userData = inserted
             }
