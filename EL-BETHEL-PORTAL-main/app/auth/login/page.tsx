@@ -69,11 +69,34 @@ export default function LoginPage() {
         loginEmail = studentUser.email
       }
 
-      const { data: authData, error: authError } =
+      let { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email: loginEmail,
           password,
         })
+
+      if (authError) {
+        const mainAdminEmail = (process.env.NEXT_PUBLIC_MAIN_ADMIN_EMAIL || '').toLowerCase()
+        if (loginEmail.toLowerCase() === mainAdminEmail) {
+          try {
+            const res = await fetch('/api/auth/create-admin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: loginEmail, password, full_name: loginEmail }),
+            })
+            const payload = await res.json().catch(() => ({}))
+            if (!res.ok && !(payload?.error || '').toLowerCase().includes('already')) {
+              throw new Error(payload?.error || 'Failed to auto-provision admin')
+            }
+            // Retry sign in after provisioning or if already exists
+            const retry = await supabase.auth.signInWithPassword({ email: loginEmail, password })
+            authData = retry.data
+            authError = retry.error
+          } catch (e: any) {
+            throw new Error(e?.message || authError.message)
+          }
+        }
+      }
 
       if (authError) throw new Error(authError.message)
 
