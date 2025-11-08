@@ -97,9 +97,9 @@ export const signIn = async (data: SignInData) => {
         .from('users')
         .select('*')
         .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
-        .single()
+        .maybeSingle()
 
-      if (userError) throw userError
+      if (userError) throw new Error((userError as any)?.message || 'Failed to fetch user')
 
       return {
         user: userData,
