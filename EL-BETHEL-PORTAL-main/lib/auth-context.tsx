@@ -59,43 +59,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const checkSession = async () => {
+    const hydrateFromSessionStorage = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
-        if (session?.user) {
-          const userData = await fetchUserProfile(session.user.id)
-          if (userData) {
-            setUser(userData)
+        const raw = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null
+        if (raw) {
+          const parsed = JSON.parse(raw) as { id?: string; auth_id?: string }
+          const uid = parsed?.auth_id || parsed?.id
+          if (uid) {
+            const userData = await fetchUserProfile(uid)
+            if (userData) setUser(userData)
           }
         }
-      } catch (error) {
-        console.error("Error checking session:", error)
+      } catch (e) {
+        // ignore parse errors
       } finally {
         setLoading(false)
       }
     }
 
-    checkSession()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const userData = await fetchUserProfile(session.user.id)
-        if (userData) {
-          setUser(userData)
-        }
-      } else {
-        setUser(null)
-      }
-    })
-
-    return () => {
-      subscription?.unsubscribe()
-    }
+    hydrateFromSessionStorage()
   }, [])
 
   const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -312,6 +294,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut()
       setUser(null)
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('user')
+        sessionStorage.removeItem('session')
+      }
       toast.success("Signed out successfully")
     } catch (error: any) {
       toast.error("Failed to sign out")
