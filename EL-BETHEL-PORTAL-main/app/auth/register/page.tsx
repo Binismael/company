@@ -179,6 +179,17 @@ export default function RegisterPage() {
         if (studentError) throw new Error(studentError.message)
       }
 
+      // If teacher, create teacher profile stub for immediate access
+      if (role === 'teacher') {
+        const { error: teacherError } = await supabase.from('teachers').insert([
+          {
+            user_id: userId,
+            first_name: formData.first_name || formData.email,
+          },
+        ])
+        if (teacherError) throw new Error(teacherError.message)
+      }
+
       setSuccess(true)
       setFormData({
         first_name: '',
