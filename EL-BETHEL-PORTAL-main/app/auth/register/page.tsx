@@ -77,6 +77,10 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
+      if (!supabase) {
+        throw new Error('Supabase client not initialized. Please check your environment variables.')
+      }
+
       const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
@@ -87,23 +91,44 @@ export default function RegisterPage() {
       })
 
       if (signupError) {
-        throw new Error(signupError.message)
+        const errorMsg = signupError.message || 'Unknown error'
+        console.error('Signup error:', errorMsg)
+        throw new Error(errorMsg)
       }
 
       if (!data.user) {
-        throw new Error('Failed to create account')
+        throw new Error('Failed to create account - no user returned')
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      try {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
-      if (signInError) {
-        throw new Error(signInError.message)
+        if (signInError) {
+          console.warn('Auto sign-in failed:', signInError.message)
+          toast.success('Account created! Please log in.')
+          router.push('/auth/login')
+          return
+        }
+      } catch (signInErr: any) {
+        console.warn('Auto sign-in error:', signInErr.message)
+        toast.success('Account created! Please log in.')
+        router.push('/auth/login')
+        return
       }
 
-      toast.success('Account created successfully!')
+      toast.success('Account created and logged in!')
       router.push('/student-dashboard')
     } catch (err: any) {
-      setError(err?.message || 'Registration failed')
+      const errorMessage = err?.message || 'Registration failed'
+      console.error('Registration error:', errorMessage, err)
+
+      if (errorMessage.includes('Failed to fetch')) {
+        setError('Unable to reach the server. Please check your internet connection and try again.')
+      } else if (errorMessage.includes('Invalid API key')) {
+        setError('Authentication service misconfigured. Please contact support.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }
