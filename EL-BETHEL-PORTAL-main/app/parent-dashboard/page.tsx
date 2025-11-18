@@ -2,153 +2,177 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, LogOut, Users, BookOpen, Award, Calendar, Download, TrendingUp } from 'lucide-react'
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
+import {
+  Users,
+  BookOpen,
+  TrendingUp,
+  AlertCircle,
+  LogOut,
+  Menu,
+  X,
+  Download,
+  Eye,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase-client'
-
-interface Student {
-  id: string
-  admission_number: string
-  reg_number?: string
-  class: { name: string; form_level: string }
-  user: { full_name: string; email: string }
-}
-
-interface Result {
-  id: string
-  subject: { name: string; code: string }
-  score: number
-  grade: string
-  term: string
-  session: string
-}
-
-interface Attendance {
-  id: string
-  attendance_date: string
-  status: string
-}
 
 export default function ParentDashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [children, setChildren] = useState<Student[]>([])
-  const [selectedChild, setSelectedChild] = useState<Student | null>(null)
-  const [childResults, setChildResults] = useState<Result[]>([])
-  const [childAttendance, setChildAttendance] = useState<Attendance[]>([])
+  const [children, setChildren] = useState<any[]>([])
+  const [selectedChild, setSelectedChild] = useState<any>(null)
+  const [results, setResults] = useState<any[]>([])
+  const [attendance, setAttendance] = useState<any[]>([])
+  const [announcements, setAnnouncements] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    const loadData = async () => {
+    const fetchData = async () => {
       try {
+        // Get current user
         const {
           data: { user: authUser },
         } = await supabase.auth.getUser()
 
         if (!authUser) {
-          router.push('/auth/login')
+          router.push('/auth/parent-login')
           return
         }
 
-        const { data: userData, error: userError } = await supabase
+        // Get user profile
+        const { data: userProfile, error: userError } = await supabase
           .from('users')
           .select('*')
-          .or(`auth_id.eq.${authUser.id},id.eq.${authUser.id}`)
+          .eq('id', authUser.id)
           .single()
 
-        if (userError || userData.role !== 'parent') {
-          router.push('/auth/login')
-          return
+        if (userError || userProfile.role !== 'parent') {
+          throw new Error('Unauthorized')
         }
 
-        setUser(userData)
+        setUser(userProfile)
 
-        const { data: childrenData, error: childrenError } = await supabase
-          .from('students')
-          .select(`
+        // Get parent's children
+        const { data: parentData, error: parentError } = await supabase
+          .from('parents')
+          .select(
+            `
             *,
-            class:classes(name, form_level),
-            user:users(full_name, email)
-          `)
-          .limit(10)
+            children:parent_student(
+              student:students(
+                id,
+                admission_number,
+                user:users(full_name),
+                class:classes(name, form_level)
+              )
+            )
+          `
+          )
+          .eq('user_id', authUser.id)
+          .single()
 
-        if (childrenError) throw childrenError
-        setChildren(childrenData)
+        if (parentError) {
+          throw new Error(parentError.message)
+        }
 
-        if (childrenData.length > 0) {
-          await loadChildData(childrenData[0])
-          setSelectedChild(childrenData[0])
+        if (parentData.children && parentData.children.length > 0) {
+          const mappedChildren = parentData.children.map((c: any) => c.student)
+          setChildren(mappedChildren)
+          setSelectedChild(mappedChildren[0])
+
+          // Fetch results for first child
+          await fetchChildData(mappedChildren[0].id)
+        } else {
+          setError('No children found. Please contact the admin.')
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to load data')
+        setError(err.message || 'Failed to load dashboard')
+        console.error(err)
       } finally {
         setLoading(false)
       }
     }
 
-    loadData()
+    fetchData()
   }, [router])
 
-  const loadChildData = async (child: Student) => {
+  const fetchChildData = async (studentId: string) => {
     try {
-      const { data: resultsData, error: resultsError } = await supabase
+      // Fetch results
+      const { data: resultsData } = await supabase
         .from('results')
-        .select(`
-          *,
-          subject:subjects(name, code)
-        `)
-        .eq('student_id', child.id)
+        .select('*, subject:subjects(name), class:classes(name)')
+        .eq('student_id', studentId)
         .order('created_at', { ascending: false })
 
-      if (resultsError) throw resultsError
-      setChildResults(resultsData)
+      setResults(resultsData || [])
 
-      const { data: attendanceData, error: attendanceError } = await supabase
+      // Fetch attendance
+      const { data: attendanceData } = await supabase
         .from('attendance')
         .select('*')
-        .eq('student_id', child.id)
+        .eq('student_id', studentId)
         .order('attendance_date', { ascending: false })
+        .limit(30)
 
-      if (attendanceError) throw attendanceError
-      setChildAttendance(attendanceData)
+      setAttendance(attendanceData || [])
+
+      // Fetch announcements
+      const { data: announcementsData } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('published_at', { ascending: false })
+        .limit(5)
+
+      setAnnouncements(announcementsData || [])
     } catch (err: any) {
-      setError(err.message)
+      toast.error('Failed to load child data')
     }
-  }
-
-  const handleSelectChild = async (child: Student) => {
-    setSelectedChild(child)
-    await loadChildData(child)
   }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    router.push('/auth/login')
+    router.push('/auth/parent-login')
   }
 
   const calculateAttendancePercentage = () => {
-    if (childAttendance.length === 0) return 0
-    const present = childAttendance.filter(
-      (a) => a.status === 'Present' || a.status === 'Late'
-    ).length
-    return ((present / childAttendance.length) * 100).toFixed(1)
+    if (attendance.length === 0) return 0
+    const present = attendance.filter((a) => a.status === 'Present').length
+    return Math.round((present / attendance.length) * 100)
   }
 
   const calculateAverageScore = () => {
-    if (childResults.length === 0) return 0
-    const total = childResults.reduce((sum, r) => sum + (r.score || 0), 0)
-    return (total / childResults.length).toFixed(2)
+    if (results.length === 0) return 0
+    const total = results.reduce((sum, r) => sum + (r.score || 0), 0)
+    return (total / results.length).toFixed(1)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-yellow-50">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
       </div>
     )
   }
@@ -156,324 +180,323 @@ export default function ParentDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex justify-between items-center">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-white">⚜</span>
-              </div>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+              >
+                {sidebarOpen ? (
+                  <X className="w-6 h-6 text-gray-600" />
+                ) : (
+                  <Menu className="w-6 h-6 text-gray-600" />
+                )}
+              </button>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                  Welcome, {user?.full_name?.split(' ')[0]}
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  Parent • Monitor children's progress
-                </p>
+                <h1 className="text-2xl font-bold text-gray-900">Parent Dashboard</h1>
+                <p className="text-sm text-gray-600">Welcome, {user?.full_name}</p>
               </div>
             </div>
             <Button
               variant="outline"
+              size="sm"
               onClick={handleLogout}
               className="gap-2"
-              size="sm"
             >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
+              <LogOut className="w-4 h-4" />
+              Logout
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {children.length === 0 ? (
-          <Alert>
-            <AlertDescription>
-              No children records found in the system.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <>
-            {/* Child Selector */}
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">My Children</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                {children.map((child) => (
-                  <Button
-                    key={child.id}
-                    variant={selectedChild?.id === child.id ? 'default' : 'outline'}
-                    onClick={() => handleSelectChild(child)}
-                    className="h-auto p-4 text-left justify-start flex-col items-start rounded-lg"
-                  >
-                    <span className="font-bold text-sm">{child.user.full_name}</span>
-                    <span className="text-xs opacity-75 mt-1">{child.class.name}</span>
-                  </Button>
-                ))}
-              </div>
+      <div className="flex">
+        {/* Sidebar */}
+        <aside
+          className={`${
+            sidebarOpen ? 'block' : 'hidden'
+          } md:block w-full md:w-64 bg-white border-r border-gray-200 p-6 space-y-6`}
+        >
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">My Children</h2>
+            <div className="space-y-2">
+              {children.map((child) => (
+                <button
+                  key={child.id}
+                  onClick={() => {
+                    setSelectedChild(child)
+                    fetchChildData(child.id)
+                    setSidebarOpen(false)
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${
+                    selectedChild?.id === child.id
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="font-semibold">{child.user.full_name}</div>
+                  <div className="text-xs text-gray-500">
+                    {child.class.name} • {child.admission_number}
+                  </div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            {selectedChild && (
-              <>
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                        <Award className="h-4 w-4" />
-                        Average Score
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl sm:text-3xl font-bold text-primary-600">
-                        {calculateAverageScore()}%
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {childResults.length} results
+          <div className="border-t pt-6">
+            <Link
+              href="/parent-dashboard/fees"
+              className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium"
+            >
+              School Fees
+            </Link>
+            <Link
+              href="/parent-dashboard/profile"
+              className="block px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg font-medium mt-2"
+            >
+              My Profile
+            </Link>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {selectedChild && (
+            <div className="space-y-6">
+              {/* Child Profile Card */}
+              <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        {selectedChild.user.full_name}
+                      </h2>
+                      <p className="text-gray-600">
+                        {selectedChild.class.name} • {selectedChild.class.form_level}
                       </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Attendance
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl sm:text-3xl font-bold text-green-600">
-                        {calculateAttendancePercentage()}%
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {childAttendance.length} records
+                      <p className="text-sm text-gray-500 mt-1">
+                        Admission: {selectedChild.admission_number}
                       </p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Full Profile
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-600">
-                        Class
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl sm:text-3xl font-bold text-orange-600">
-                        {selectedChild.class.form_level}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {selectedChild.class.name}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                      Average Score
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {calculateAverageScore()}%
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {results.length} subjects graded
+                    </p>
+                  </CardContent>
+                </Card>
 
-                {/* Navigation Tabs */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex overflow-x-auto gap-2">
-                  <button className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded whitespace-nowrap">
-                    Results
-                  </button>
-                  <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    Attendance
-                  </button>
-                  <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap">
-                    Profile
-                  </button>
-                </div>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-600" />
+                      Attendance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {calculateAttendancePercentage()}%
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {attendance.filter((a) => a.status === 'Present').length} days present
+                    </p>
+                  </CardContent>
+                </Card>
 
-                <div className="space-y-6">
-                  {/* Results Section */}
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>Academic Results</CardTitle>
-                          <CardDescription>
-                            {selectedChild.user.full_name}'s grades and scores
-                          </CardDescription>
-                        </div>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Download className="h-4 w-4" />
-                          <span className="hidden sm:inline">Export</span>
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {childResults.length === 0 ? (
-                        <p className="text-gray-500 text-center py-8">
-                          No results available yet
-                        </p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-gray-50 border-b">
-                              <tr>
-                                <th className="text-left py-3 px-4 font-medium">Subject</th>
-                                <th className="text-left py-3 px-4 font-medium">Score</th>
-                                <th className="text-left py-3 px-4 font-medium">Grade</th>
-                                <th className="text-left py-3 px-4 font-medium">Term</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {childResults.map((result) => (
-                                <tr
-                                  key={result.id}
-                                  className="border-b hover:bg-gray-50"
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-purple-600" />
+                      Subjects
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {results.length}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">Total registered</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabs */}
+              <Tabs defaultValue="results" className="bg-white rounded-lg">
+                <TabsList className="grid w-full grid-cols-3 p-4 bg-gray-50 border-b">
+                  <TabsTrigger value="results">Results</TabsTrigger>
+                  <TabsTrigger value="attendance">Attendance</TabsTrigger>
+                  <TabsTrigger value="announcements">Announcements</TabsTrigger>
+                </TabsList>
+
+                {/* Results Tab */}
+                <TabsContent value="results" className="p-6 space-y-4">
+                  {results.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-3 font-semibold text-gray-900">Subject</th>
+                            <th className="text-left py-3 font-semibold text-gray-900">Score</th>
+                            <th className="text-left py-3 font-semibold text-gray-900">Grade</th>
+                            <th className="text-left py-3 font-semibold text-gray-900">Term</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {results.map((result) => (
+                            <tr
+                              key={result.id}
+                              className="border-b border-gray-100 hover:bg-gray-50"
+                            >
+                              <td className="py-3 text-gray-900">{result.subject.name}</td>
+                              <td className="py-3 font-semibold">{result.score}%</td>
+                              <td className="py-3">
+                                <span
+                                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                    result.score >= 70
+                                      ? 'bg-green-100 text-green-800'
+                                      : result.score >= 50
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}
                                 >
-                                  <td className="py-3 px-4 font-medium text-gray-900">
-                                    {result.subject.name}
-                                  </td>
-                                  <td className="py-3 px-4 text-gray-600">{result.score}%</td>
-                                  <td className="py-3 px-4">
-                                    <Badge variant="secondary">
-                                      {result.grade}
-                                    </Badge>
-                                  </td>
-                                  <td className="py-3 px-4 text-gray-600 text-xs">
-                                    {result.term}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                                  {result.grade || (result.score >= 70 ? 'A' : result.score >= 50 ? 'B' : 'C')}
+                                </span>
+                              </td>
+                              <td className="py-3 text-gray-600">{result.term}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center py-8 text-gray-600">No results available yet</p>
+                  )}
+                </TabsContent>
 
-                  {/* Attendance Section */}
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader>
-                      <CardTitle>Attendance Summary</CardTitle>
-                      <CardDescription>
-                        {selectedChild.user.full_name}'s attendance record
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {childAttendance.length === 0 ? (
-                        <p className="text-gray-500 text-center py-8">
-                          No attendance records available
-                        </p>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                              <p className="text-2xl font-bold text-green-600">
-                                {childAttendance.filter(a => a.status === 'Present').length}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1">Present</p>
-                            </div>
-                            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                              <p className="text-2xl font-bold text-red-600">
-                                {childAttendance.filter(a => a.status === 'Absent').length}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1">Absent</p>
-                            </div>
-                            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                              <p className="text-2xl font-bold text-yellow-600">
-                                {childAttendance.filter(a => a.status === 'Late').length}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1">Late</p>
-                            </div>
-                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                              <p className="text-2xl font-bold text-blue-600">
-                                {calculateAttendancePercentage()}%
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1">Rate</p>
-                            </div>
+                {/* Attendance Tab */}
+                <TabsContent value="attendance" className="p-6">
+                  {attendance.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-4 gap-4 mb-6">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {attendance.filter((a) => a.status === 'Present').length}
                           </div>
-
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                              <thead className="bg-gray-50 border-b">
-                                <tr>
-                                  <th className="text-left py-3 px-4 font-medium">Date</th>
-                                  <th className="text-left py-3 px-4 font-medium">Status</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {childAttendance.slice(0, 20).map((record, idx) => (
-                                  <tr key={idx} className="border-b hover:bg-gray-50">
-                                    <td className="py-3 px-4 text-gray-600">
-                                      {new Date(record.attendance_date).toLocaleDateString()}
-                                    </td>
-                                    <td className="py-3 px-4">
-                                      <Badge
-                                        variant={
-                                          record.status === 'Present'
-                                            ? 'default'
-                                            : record.status === 'Absent'
-                                            ? 'destructive'
-                                            : 'secondary'
-                                        }
-                                      >
-                                        {record.status}
-                                      </Badge>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                          <p className="text-xs text-gray-600">Present</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-600">
+                            {attendance.filter((a) => a.status === 'Absent').length}
                           </div>
+                          <p className="text-xs text-gray-600">Absent</p>
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Profile Section */}
-                  <Card className="border-0 shadow-sm">
-                    <CardHeader>
-                      <CardTitle>Student Profile</CardTitle>
-                      <CardDescription>
-                        {selectedChild.user.full_name}'s information
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Full Name</p>
-                          <p className="font-semibold text-lg mt-1 text-gray-900">
-                            {selectedChild.user.full_name}
-                          </p>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-yellow-600">
+                            {attendance.filter((a) => a.status === 'Late').length}
+                          </div>
+                          <p className="text-xs text-gray-600">Late</p>
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Email</p>
-                          <p className="font-semibold text-lg mt-1 text-gray-900">
-                            {selectedChild.user.email}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Class</p>
-                          <p className="font-semibold text-lg mt-1 text-gray-900">
-                            {selectedChild.class.name}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Form Level</p>
-                          <p className="font-semibold text-lg mt-1 text-gray-900">
-                            {selectedChild.class.form_level}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-wide">Registration Number</p>
-                          <p className="font-semibold text-lg font-mono mt-1 text-gray-900">
-                            {selectedChild.reg_number || selectedChild.admission_number}
-                          </p>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {attendance.filter((a) => a.status === 'Excused').length}
+                          </div>
+                          <p className="text-xs text-gray-600">Excused</p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </>
-            )}
-          </>
-        )}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-3 font-semibold text-gray-900">Date</th>
+                              <th className="text-left py-3 font-semibold text-gray-900">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {attendance.slice(0, 10).map((record) => (
+                              <tr
+                                key={record.id}
+                                className="border-b border-gray-100 hover:bg-gray-50"
+                              >
+                                <td className="py-3">
+                                  {new Date(record.attendance_date).toLocaleDateString()}
+                                </td>
+                                <td className="py-3">
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                      record.status === 'Present'
+                                        ? 'bg-green-100 text-green-800'
+                                        : record.status === 'Absent'
+                                        ? 'bg-red-100 text-red-800'
+                                        : record.status === 'Late'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}
+                                  >
+                                    {record.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center py-8 text-gray-600">No attendance records yet</p>
+                  )}
+                </TabsContent>
+
+                {/* Announcements Tab */}
+                <TabsContent value="announcements" className="p-6 space-y-4">
+                  {announcements.length > 0 ? (
+                    announcements.map((announcement) => (
+                      <Card key={announcement.id} className="border-gray-200">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{announcement.title}</CardTitle>
+                          <CardDescription>
+                            {new Date(announcement.published_at).toLocaleDateString()}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-gray-700 text-sm">{announcement.content}</p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-center py-8 text-gray-600">No announcements yet</p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   )
