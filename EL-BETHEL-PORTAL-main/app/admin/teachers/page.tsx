@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,99 +23,76 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Edit, Trash2, Eye, Mail, Clock, Award } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Mail, Clock, Award, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase-client'
 
 interface Teacher {
   id: string
-  name: string
-  email: string
-  phone: string
-  department: string
-  assignedClasses: string[]
-  subjects: string[]
-  status: 'active' | 'inactive' | 'on_leave'
-  examsCreated: number
-  materialsUploaded: number
-  lastActive: string
-  joinDate: string
+  user_id: string
+  full_name: string
+  email?: string
+  phone?: string
+  department?: string
+  status?: string
+  employee_id?: string
+  created_at?: string
 }
 
 export default function TeachersPage() {
-  const [teachers, setTeachers] = useState<Teacher[]>([
-    {
-      id: '1',
-      name: 'Mrs. Adeyemi',
-      email: 'adeyemi@elbethel.edu',
-      phone: '+234 805 123 4567',
-      department: 'Mathematics',
-      assignedClasses: ['SS1A', 'SS2B'],
-      subjects: ['Mathematics', 'Further Mathematics'],
-      status: 'active',
-      examsCreated: 8,
-      materialsUploaded: 24,
-      lastActive: '2024-01-20 10:30 AM',
-      joinDate: '2022-09-15',
-    },
-    {
-      id: '2',
-      name: 'Mr. Okafor',
-      email: 'okafor@elbethel.edu',
-      phone: '+234 803 456 7890',
-      department: 'English',
-      assignedClasses: ['SS2A', 'SS3B'],
-      subjects: ['English Language', 'Literature in English'],
-      status: 'active',
-      examsCreated: 6,
-      materialsUploaded: 19,
-      lastActive: '2024-01-20 02:15 PM',
-      joinDate: '2021-08-20',
-    },
-    {
-      id: '3',
-      name: 'Dr. Uzoh',
-      email: 'uzoh@elbethel.edu',
-      phone: '+234 807 890 1234',
-      department: 'Science',
-      assignedClasses: ['SS1A', 'SS1B', 'SS2A'],
-      subjects: ['Biology', 'Chemistry'],
-      status: 'active',
-      examsCreated: 10,
-      materialsUploaded: 31,
-      lastActive: '2024-01-19 11:45 AM',
-      joinDate: '2020-06-10',
-    },
-    {
-      id: '4',
-      name: 'Prof. Nwosu',
-      email: 'nwosu@elbethel.edu',
-      phone: '+234 809 234 5678',
-      department: 'Science',
-      assignedClasses: ['SS2B', 'SS3A'],
-      subjects: ['Chemistry', 'Physics'],
-      status: 'on_leave',
-      examsCreated: 5,
-      materialsUploaded: 15,
-      lastActive: '2024-01-18 09:00 AM',
-      joinDate: '2019-05-12',
-    },
-  ])
+  const [loading, setLoading] = useState(true)
+  const [teachers, setTeachers] = useState<Teacher[]>([])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDepartment, setFilterDepartment] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
 
+  useEffect(() => {
+    loadTeachers()
+  }, [])
+
+  const loadTeachers = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('teachers')
+        .select('*, users:user_id(full_name, email)')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const mappedTeachers = (data || []).map((teacher: any) => ({
+        id: teacher.id,
+        user_id: teacher.user_id,
+        full_name: teacher.users?.full_name || 'Unknown',
+        email: teacher.users?.email || teacher.email,
+        phone: teacher.phone,
+        department: teacher.department || 'Not specified',
+        status: teacher.status || 'active',
+        employee_id: teacher.employee_id,
+        created_at: teacher.created_at,
+      }))
+
+      setTeachers(mappedTeachers)
+    } catch (error: any) {
+      console.error('Error loading teachers:', error)
+      toast.error('Failed to load teachers')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredTeachers = teachers.filter((teacher) => {
     const matchesSearch =
-      teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesDepartment = filterDepartment === 'all' || teacher.department === filterDepartment
-    const matchesStatus = filterStatus === 'all' || teacher.status === filterStatus
+      teacher.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (teacher.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    const matchesDepartment = filterDepartment === 'all' || (teacher.department?.toLowerCase() === filterDepartment.toLowerCase())
+    const matchesStatus = filterStatus === 'all' || (teacher.status?.toLowerCase() === filterStatus.toLowerCase())
     return matchesSearch && matchesDepartment && matchesStatus
   })
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status?: string) => {
+    switch (status?.toLowerCase()) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800">Active</Badge>
       case 'inactive':
@@ -123,17 +100,39 @@ export default function TeachersPage() {
       case 'on_leave':
         return <Badge className="bg-yellow-100 text-yellow-800">On Leave</Badge>
       default:
-        return <Badge>Unknown</Badge>
+        return <Badge className="bg-blue-100 text-blue-800">Active</Badge>
     }
   }
 
-  const handleDeleteTeacher = (id: string) => {
-    setTeachers(teachers.filter((t) => t.id !== id))
-    toast.success('Teacher removed')
+  const handleDeleteTeacher = async (id: string) => {
+    if (!confirm('Delete this teacher? This action cannot be undone.')) return
+
+    try {
+      const { error } = await supabase
+        .from('teachers')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      setTeachers(teachers.filter((t) => t.id !== id))
+      toast.success('Teacher removed successfully')
+    } catch (error: any) {
+      console.error('Error deleting teacher:', error)
+      toast.error(error.message || 'Failed to delete teacher')
+    }
   }
 
-  const departments = ['all', 'Mathematics', 'English', 'Science', 'Social Studies', 'Languages']
+  const departments = ['all', 'Mathematics', 'English', 'Science', 'Social Studies', 'Languages', 'Computer Science', 'Physical Education']
   const statuses = ['all', 'active', 'inactive', 'on_leave']
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -227,31 +226,28 @@ export default function TeachersPage() {
               filteredTeachers.map((teacher) => (
                 <div key={teacher.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50 transition">
                   <Avatar>
-                    <AvatarFallback>{teacher.name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>{teacher.full_name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <p className="font-semibold text-gray-900">{teacher.name}</p>
-                        <p className="text-sm text-gray-600">{teacher.department} Department</p>
+                        <p className="font-semibold text-gray-900">{teacher.full_name}</p>
+                        <p className="text-sm text-gray-600">{teacher.department || 'Not specified'}</p>
                       </div>
                       {getStatusBadge(teacher.status)}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4" />
-                        {teacher.email}
+                        {teacher.email || 'No email'}
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
-                        Last active: {teacher.lastActive}
+                        Joined: {teacher.created_at ? new Date(teacher.created_at).toLocaleDateString() : 'N/A'}
                       </div>
                       <div className="flex items-center gap-2">
                         <Award className="w-4 h-4" />
-                        {teacher.examsCreated} exams created
-                      </div>
-                      <div>
-                        <strong>Assigned Classes:</strong> {teacher.assignedClasses.join(', ')}
+                        ID: {teacher.employee_id || 'Not assigned'}
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2">

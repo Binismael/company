@@ -71,8 +71,8 @@ export default function LandingPage() {
               <Link href="/auth/login">
                 <Button variant="outline" size="sm">Login</Button>
               </Link>
-              <Link href="/auth/register">
-                <Button size="sm">Register</Button>
+              <Link href="/auth/login">
+                <Button size="sm">Contact Admin</Button>
               </Link>
             </div>
 
@@ -95,8 +95,8 @@ export default function LandingPage() {
                 <Link href="/auth/login" className="flex-1">
                   <Button variant="outline" size="sm" className="w-full">Login</Button>
                 </Link>
-                <Link href="/auth/register" className="flex-1">
-                  <Button size="sm" className="w-full">Register</Button>
+                <Link href="/auth/login" className="flex-1">
+                  <Button size="sm" className="w-full">Contact Admin</Button>
                 </Link>
               </div>
             </div>
@@ -115,9 +115,9 @@ export default function LandingPage() {
               A complete portal for students, teachers, and administrators. Manage classes, exams, results, and payments—all in one place.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/auth/register">
+              <Link href="#contact">
                 <Button size="lg" className="w-full sm:w-auto gap-2">
-                  Get Started <ArrowRight className="h-5 w-5" />
+                  Contact Admin <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/auth/login">
@@ -319,9 +319,9 @@ export default function LandingPage() {
             Join thousands of students and teachers already using El Bethel Academy Portal.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/register">
+            <Link href="#contact">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 w-full sm:w-auto">
-                Create Account
+                Contact Admin
               </Button>
             </Link>
             <Link href="/auth/login">
@@ -349,7 +349,7 @@ export default function LandingPage() {
               <h4 className="font-bold text-white mb-4">Quick Links</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/auth/login" className="hover:text-white">Login</Link></li>
-                <li><Link href="/auth/register" className="hover:text-white">Register</Link></li>
+                <li><a href="#contact" className="hover:text-white">Contact</a></li>
                 <li><a href="#contact" className="hover:text-white">Contact</a></li>
               </ul>
             </div>

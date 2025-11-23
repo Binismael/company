@@ -38,12 +38,12 @@ export function useStudentApprovalGuard(): UseStudentApprovalGuardResult {
         // Fetch student record to check approval status
         const { data: student, error: studentError } = await supabase
           .from('students')
-          .select('id, approved, user_id')
+          .select('*')
           .eq('user_id', user.id)
           .single()
 
         if (studentError) {
-          console.error('Error fetching student approval status:', studentError)
+          console.error('Error fetching student approval status:', studentError.message || studentError)
           setError('Failed to verify account status')
           setIsLoading(false)
           return
@@ -58,13 +58,12 @@ export function useStudentApprovalGuard(): UseStudentApprovalGuardResult {
 
         setStudentId(student.id)
 
-        // Check if student is approved
-        if (!student.approved) {
-          // Student is not approved, redirect to pending page
+        // Check if student is approved using flexible schema (approved | is_approved | status)
+        const approvedFlag = Boolean((student as any)?.approved ?? (student as any)?.is_approved ?? ((student as any)?.status === 'approved'))
+        if (!approvedFlag) {
           router.push('/pending-approval')
           setIsApproved(false)
         } else {
-          // Student is approved, allow access
           setIsApproved(true)
         }
 

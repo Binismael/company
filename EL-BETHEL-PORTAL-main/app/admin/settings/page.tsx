@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,42 +9,69 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertCircle, Save, Database, Bell, Lock, Zap } from 'lucide-react'
+import { AlertCircle, Save, Database, Bell, Lock, Zap, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase-client'
+
+interface Settings {
+  school_name?: string
+  school_code?: string
+  principal_email?: string
+  school_phone?: string
+  school_address?: string
+  website?: string
+  current_session?: string
+  current_term?: string
+  session_start_date?: string
+  session_end_date?: string
+  result_release_enabled?: boolean
+  result_download_enabled?: boolean
+  student_registration_open?: boolean
+  enable_payments?: boolean
+  fee_reminder_days_before_due?: number
+  email_notifications_enabled?: boolean
+  sms_notifications_enabled?: boolean
+  paystack_webhook_url?: string
+  maintenance_mode?: boolean
+  auto_backup_enabled?: boolean
+  backup_time?: string
+  session_timeout?: number
+  max_upload_size?: number
+  enable_two_factor?: boolean
+}
 
 export default function SettingsPage() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
   const [schoolSettings, setSchoolSettings] = useState({
-    schoolName: 'El Bethel Academy',
-    schoolCode: 'EBA-2024',
-    principalEmail: 'principal@elbethel.edu',
-    schoolPhone: '+234 803 123 4567',
-    schoolAddress: '123 Education Lane, Lagos, Nigeria',
-    website: 'www.elbethel.edu',
+    schoolName: '',
+    schoolCode: '',
+    principalEmail: '',
+    schoolPhone: '',
+    schoolAddress: '',
+    website: '',
   })
 
   const [academicSettings, setAcademicSettings] = useState({
-    currentSession: '2023/2024',
-    currentTerm: 'First Term',
-    sessionStartDate: '2023-09-01',
-    sessionEndDate: '2024-06-30',
+    currentSession: '',
+    currentTerm: '',
+    sessionStartDate: '',
+    sessionEndDate: '',
     resultReleaseEnabled: true,
     resultDownloadEnabled: true,
     studentRegistrationOpen: true,
   })
 
   const [paymentSettings, setPaymentSettings] = useState({
-    paystackPublicKey: 'pk_live_xxxxxxxxx',
-    paystackSecretKey: 'sk_live_xxxxxxxxx',
     enablePayments: true,
-    autoBlockUnpaidStudents: false,
     feeReminderDaysBeforeDue: 7,
   })
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotificationsEnabled: true,
     smsNotificationsEnabled: false,
-    paystackWebhookUrl: 'https://yourdomain.com/webhook',
-    smsProvider: 'none',
+    paystackWebhookUrl: '',
   })
 
   const [systemSettings, setSystemSettings] = useState({
@@ -56,28 +83,187 @@ export default function SettingsPage() {
     enableTwoFactor: false,
   })
 
-  const handleSaveSchoolSettings = () => {
-    toast.success('School settings saved')
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        toast.error('Not authenticated')
+        return
+      }
+
+      const response = await fetch('/api/admin/settings', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings')
+      }
+
+      const { settings } = await response.json()
+
+      if (settings) {
+        setSchoolSettings({
+          schoolName: settings.school_name || '',
+          schoolCode: settings.school_code || '',
+          principalEmail: settings.principal_email || '',
+          schoolPhone: settings.school_phone || '',
+          schoolAddress: settings.school_address || '',
+          website: settings.website || '',
+        })
+
+        setAcademicSettings({
+          currentSession: settings.current_session || '',
+          currentTerm: settings.current_term || '',
+          sessionStartDate: settings.session_start_date || '',
+          sessionEndDate: settings.session_end_date || '',
+          resultReleaseEnabled: settings.result_release_enabled ?? true,
+          resultDownloadEnabled: settings.result_download_enabled ?? true,
+          studentRegistrationOpen: settings.student_registration_open ?? true,
+        })
+
+        setPaymentSettings({
+          enablePayments: settings.enable_payments ?? true,
+          feeReminderDaysBeforeDue: settings.fee_reminder_days_before_due || 7,
+        })
+
+        setNotificationSettings({
+          emailNotificationsEnabled: settings.email_notifications_enabled ?? true,
+          smsNotificationsEnabled: settings.sms_notifications_enabled ?? false,
+          paystackWebhookUrl: settings.paystack_webhook_url || '',
+        })
+
+        setSystemSettings({
+          maintenanceMode: settings.maintenance_mode ?? false,
+          autoBackupEnabled: settings.auto_backup_enabled ?? true,
+          backupTime: settings.backup_time || '02:00',
+          sessionTimeout: settings.session_timeout || 30,
+          maxUploadSize: settings.max_upload_size || 10,
+          enableTwoFactor: settings.enable_two_factor ?? false,
+        })
+      }
+    } catch (error: any) {
+      console.error('Error loading settings:', error)
+      toast.error('Failed to load settings')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleSaveAcademicSettings = () => {
-    toast.success('Academic settings saved')
+  const saveSettings = async (settingsToSave: Partial<Settings>) => {
+    try {
+      setSaving(true)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        toast.error('Not authenticated')
+        return false
+      }
+
+      const response = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(settingsToSave)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save settings')
+      }
+
+      toast.success('Settings saved successfully')
+      return true
+    } catch (error: any) {
+      console.error('Error saving settings:', error)
+      toast.error(error.message || 'Failed to save settings')
+      return false
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleSavePaymentSettings = () => {
-    toast.success('Payment settings saved')
+  const handleSaveSchoolSettings = async () => {
+    await saveSettings({
+      school_name: schoolSettings.schoolName,
+      school_code: schoolSettings.schoolCode,
+      principal_email: schoolSettings.principalEmail,
+      school_phone: schoolSettings.schoolPhone,
+      school_address: schoolSettings.schoolAddress,
+      website: schoolSettings.website,
+    })
   }
 
-  const handleSaveNotificationSettings = () => {
-    toast.success('Notification settings saved')
+  const handleSaveAcademicSettings = async () => {
+    await saveSettings({
+      current_session: academicSettings.currentSession,
+      current_term: academicSettings.currentTerm,
+      session_start_date: academicSettings.sessionStartDate,
+      session_end_date: academicSettings.sessionEndDate,
+      result_release_enabled: academicSettings.resultReleaseEnabled,
+      result_download_enabled: academicSettings.resultDownloadEnabled,
+      student_registration_open: academicSettings.studentRegistrationOpen,
+    })
   }
 
-  const handleSaveSystemSettings = () => {
-    toast.success('System settings saved')
+  const handleSavePaymentSettings = async () => {
+    await saveSettings({
+      enable_payments: paymentSettings.enablePayments,
+      fee_reminder_days_before_due: paymentSettings.feeReminderDaysBeforeDue,
+    })
   }
 
-  const handleTestPaystackConnection = () => {
-    toast.success('Paystack connection verified')
+  const handleSaveNotificationSettings = async () => {
+    await saveSettings({
+      email_notifications_enabled: notificationSettings.emailNotificationsEnabled,
+      sms_notifications_enabled: notificationSettings.smsNotificationsEnabled,
+      paystack_webhook_url: notificationSettings.paystackWebhookUrl,
+    })
+  }
+
+  const handleSaveSystemSettings = async () => {
+    await saveSettings({
+      maintenance_mode: systemSettings.maintenanceMode,
+      auto_backup_enabled: systemSettings.autoBackupEnabled,
+      backup_time: systemSettings.backupTime,
+      session_timeout: systemSettings.sessionTimeout,
+      max_upload_size: systemSettings.maxUploadSize,
+      enable_two_factor: systemSettings.enableTwoFactor,
+    })
+  }
+
+  const handleTestPaystackConnection = async () => {
+    try {
+      const response = await fetch('/api/payments/paystack/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      if (response.ok) {
+        toast.success('Paystack connection verified')
+      } else {
+        toast.error('Paystack connection failed')
+      }
+    } catch (error) {
+      toast.error('Failed to test connection')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -178,9 +364,9 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <Button onClick={handleSaveSchoolSettings} className="gap-2">
+              <Button onClick={handleSaveSchoolSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -308,9 +494,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button onClick={handleSaveAcademicSettings} className="gap-2">
+              <Button onClick={handleSaveAcademicSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -326,14 +512,14 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">Keep your payment keys confidential. Never share these with unauthorized persons.</p>
+              <p className="text-sm text-amber-900">Payment keys are configured via environment variables for security. Contact your system administrator to update Paystack credentials.</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
               <CardTitle>Payment Gateway Configuration</CardTitle>
-              <CardDescription>Paystack payment processing settings</CardDescription>
+              <CardDescription>Payment processing settings</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -350,79 +536,35 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Paystack Public Key *</label>
+                <label className="text-sm font-medium">Fee Reminder (Days Before Due)</label>
                 <Input
-                  type="password"
-                  value={paymentSettings.paystackPublicKey}
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={paymentSettings.feeReminderDaysBeforeDue}
                   onChange={(e) =>
                     setPaymentSettings({
                       ...paymentSettings,
-                      paystackPublicKey: e.target.value,
+                      feeReminderDaysBeforeDue: parseInt(e.target.value),
                     })
                   }
                   className="mt-2"
                 />
-                <p className="text-xs text-gray-600 mt-2">Get from your Paystack dashboard</p>
+                <p className="text-xs text-gray-600 mt-2">Number of days before due date to send reminders</p>
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Paystack Secret Key *</label>
-                <Input
-                  type="password"
-                  value={paymentSettings.paystackSecretKey}
-                  onChange={(e) =>
-                    setPaymentSettings({
-                      ...paymentSettings,
-                      paystackSecretKey: e.target.value,
-                    })
-                  }
-                  className="mt-2"
-                />
-                <p className="text-xs text-gray-600 mt-2">Keep this key secret and secure</p>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-medium text-blue-900 mb-2">Paystack Configuration</p>
+                <p className="text-xs text-blue-800">Paystack API keys are securely configured in your deployment environment. To update your keys, contact your system administrator or deploy with updated environment variables.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Fee Reminder (Days Before)</label>
-                  <Input
-                    type="number"
-                    value={paymentSettings.feeReminderDaysBeforeDue}
-                    onChange={(e) =>
-                      setPaymentSettings({
-                        ...paymentSettings,
-                        feeReminderDaysBeforeDue: parseInt(e.target.value),
-                      })
-                    }
-                    className="mt-2"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={handleTestPaystackConnection} variant="outline" className="w-full gap-2">
-                    <Zap className="w-4 h-4" />
-                    Test Connection
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-red-50 border-red-200">
-                <div>
-                  <p className="font-medium text-red-900">Auto-block Unpaid Students</p>
-                  <p className="text-sm text-red-700">Prevent portal access if fees unpaid</p>
-                </div>
-                <Switch
-                  checked={paymentSettings.autoBlockUnpaidStudents}
-                  onCheckedChange={(val) =>
-                    setPaymentSettings({
-                      ...paymentSettings,
-                      autoBlockUnpaidStudents: val,
-                    })
-                  }
-                />
-              </div>
-
-              <Button onClick={handleSavePaymentSettings} className="gap-2">
+              <Button
+                onClick={handleSavePaymentSettings}
+                disabled={saving}
+                className="gap-2"
+              >
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -493,9 +635,9 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <Button onClick={handleSaveNotificationSettings} className="gap-2">
+              <Button onClick={handleSaveNotificationSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>
@@ -580,9 +722,9 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button onClick={handleSaveSystemSettings} className="gap-2">
+              <Button onClick={handleSaveSystemSettings} disabled={saving} className="gap-2">
                 <Save className="w-4 h-4" />
-                Save Settings
+                {saving ? 'Saving...' : 'Save Settings'}
               </Button>
             </CardContent>
           </Card>

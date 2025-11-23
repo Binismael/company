@@ -29,6 +29,7 @@ import {
   SelectValue 
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/error-utils'
 import { 
   Upload, 
   AlertTriangle, 
@@ -198,11 +199,11 @@ export default function StudentRegistration() {
           router.push('/auth/login?message=registration-pending')
         }, 2000)
       } else {
-        toast.error(result.error || 'Registration failed')
+        toast.error(getErrorMessage(result, 'Registration failed'))
       }
     } catch (error) {
       console.error('Registration error:', error)
-      toast.error('An unexpected error occurred')
+      toast.error(getErrorMessage(error, 'An unexpected error occurred'))
     } finally {
       setIsSubmitting(false)
     }

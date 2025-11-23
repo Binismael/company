@@ -48,7 +48,7 @@ export default function PendingApprovalPage() {
 
         if (studentError) {
           setError('Could not load student information')
-          console.error(studentError)
+          console.error('Error fetching student info:', studentError.message || studentError)
           return
         }
 
@@ -90,18 +90,20 @@ export default function PendingApprovalPage() {
       // Check approval status
       const { data: student } = await supabase
         .from('students')
-        .select('approved')
+        .select('*')
         .eq('user_id', user.id)
         .single()
 
-      if (student?.approved) {
-        // Student has been approved, redirect to dashboard
+      const approvedFlag = Boolean((student as any)?.approved ?? (student as any)?.is_approved ?? ((student as any)?.status === 'approved'))
+      if (approvedFlag) {
         router.push('/student-dashboard')
       } else {
         setError('Your account is still pending admin approval. Please check back later.')
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to check status')
+      const errorMessage = err?.message || err?.error_description || 'Failed to check status'
+      setError(errorMessage)
+      console.error('Error checking approval status:', err)
     } finally {
       setChecking(false)
     }

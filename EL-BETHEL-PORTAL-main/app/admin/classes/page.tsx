@@ -25,6 +25,7 @@ interface Class {
   name: string
   form_level: string
   capacity: number
+  class_teacher_id?: string
   class_teacher?: { full_name: string }
   student_count: number
 }
@@ -34,70 +35,14 @@ interface Subject {
   name: string
   code: string
   class_id: string
+  teacher_id?: string
   teacher?: { full_name: string }
 }
 
 export default function ClassManagementPage() {
   const [loading, setLoading] = useState(true)
-  const [classes, setClasses] = useState<Class[]>([
-    {
-      id: '1',
-      name: 'SS1A',
-      form_level: 'SS 1',
-      capacity: 40,
-      student_count: 38,
-      class_teacher: { full_name: 'Mrs. Adeyemi' },
-    },
-    {
-      id: '2',
-      name: 'SS1B',
-      form_level: 'SS 1',
-      capacity: 42,
-      student_count: 40,
-      class_teacher: { full_name: 'Mr. Okafor' },
-    },
-    {
-      id: '3',
-      name: 'SS2A',
-      form_level: 'SS 2',
-      capacity: 45,
-      student_count: 42,
-      class_teacher: { full_name: 'Dr. Uzoh' },
-    },
-    {
-      id: '4',
-      name: 'SS2B',
-      form_level: 'SS 2',
-      capacity: 43,
-      student_count: 40,
-      class_teacher: { full_name: 'Prof. Nwosu' },
-    },
-    {
-      id: '5',
-      name: 'SS3A',
-      form_level: 'SS 3',
-      capacity: 38,
-      student_count: 37,
-      class_teacher: { full_name: 'Mr. Bello' },
-    },
-    {
-      id: '6',
-      name: 'SS3B',
-      form_level: 'SS 3',
-      capacity: 40,
-      student_count: 38,
-      class_teacher: { full_name: 'Mrs. Eze' },
-    },
-  ])
-
-  const [subjects, setSubjects] = useState<Subject[]>([
-    { id: '1', name: 'Mathematics', code: 'MATH101', class_id: '1', teacher: { full_name: 'Mrs. Adeyemi' } },
-    { id: '2', name: 'English Language', code: 'ENG101', class_id: '1', teacher: { full_name: 'Mr. Okafor' } },
-    { id: '3', name: 'Biology', code: 'BIO101', class_id: '1', teacher: { full_name: 'Dr. Uzoh' } },
-    { id: '4', name: 'Chemistry', code: 'CHEM101', class_id: '1', teacher: { full_name: 'Prof. Nwosu' } },
-    { id: '5', name: 'Physics', code: 'PHY101', class_id: '1', teacher: { full_name: 'Mr. Bello' } },
-    { id: '6', name: 'History', code: 'HIST101', class_id: '1', teacher: { full_name: 'Mrs. Eze' } },
-  ])
+  const [classes, setClasses] = useState<Class[]>([])
+  const [subjects, setSubjects] = useState<Subject[]>([])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddClassDialog, setShowAddClassDialog] = useState(false)
@@ -106,54 +51,168 @@ export default function ClassManagementPage() {
   const [newSubject, setNewSubject] = useState({ name: '', code: '', classId: '' })
 
   useEffect(() => {
-    setLoading(false)
+    loadClassesAndSubjects()
   }, [])
 
-  const handleAddClass = () => {
+  const loadClassesAndSubjects = async () => {
+    try {
+      setLoading(true)
+
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select(`
+          id,
+          name,
+          form_level,
+          capacity,
+          class_teacher_id,
+          users:class_teacher_id(full_name)
+        `)
+        .order('form_level', { ascending: true })
+        .order('name', { ascending: true })
+
+      if (classesError) throw classesError
+
+      const classesWithCount = await Promise.all(
+        (classesData || []).map(async (cls: any) => {
+          const { count } = await supabase
+            .from('students')
+            .select('id', { count: 'exact', head: true })
+            .eq('class_id', cls.id)
+
+          return {
+            id: cls.id,
+            name: cls.name,
+            form_level: cls.form_level,
+            capacity: cls.capacity,
+            class_teacher_id: cls.class_teacher_id,
+            class_teacher: cls.users ? { full_name: cls.users.full_name } : undefined,
+            student_count: count || 0,
+          }
+        })
+      )
+
+      setClasses(classesWithCount)
+
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from('subjects')
+        .select(`
+          id,
+          name,
+          code,
+          class_id,
+          teacher_id,
+          users:teacher_id(full_name)
+        `)
+        .order('name', { ascending: true })
+
+      if (subjectsError) throw subjectsError
+
+      setSubjects(
+        (subjectsData || []).map((subject: any) => ({
+          id: subject.id,
+          name: subject.name,
+          code: subject.code,
+          class_id: subject.class_id,
+          teacher_id: subject.teacher_id,
+          teacher: subject.users ? { full_name: subject.users.full_name } : undefined,
+        }))
+      )
+    } catch (error: any) {
+      console.error('Error loading classes and subjects:', error)
+      toast.error('Failed to load classes and subjects')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddClass = async () => {
     if (!newClass.name || !newClass.formLevel) {
       toast.error('Please fill in all fields')
       return
     }
 
-    const classItem: Class = {
-      id: String(classes.length + 1),
-      name: newClass.name,
-      form_level: newClass.formLevel,
-      capacity: newClass.capacity,
-      student_count: 0,
-      class_teacher: undefined,
-    }
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .insert({
+          name: newClass.name,
+          form_level: newClass.formLevel,
+          capacity: newClass.capacity,
+        })
+        .select()
+        .single()
 
-    setClasses([...classes, classItem])
-    setNewClass({ name: '', formLevel: '', capacity: 40 })
-    setShowAddClassDialog(false)
-    toast.success('Class created successfully')
+      if (error) throw error
+
+      setClasses([...classes, {
+        id: data.id,
+        name: data.name,
+        form_level: data.form_level,
+        capacity: data.capacity,
+        student_count: 0,
+      }])
+
+      setNewClass({ name: '', formLevel: '', capacity: 40 })
+      setShowAddClassDialog(false)
+      toast.success('Class created successfully')
+    } catch (error: any) {
+      console.error('Error creating class:', error)
+      toast.error(error.message || 'Failed to create class')
+    }
   }
 
-  const handleAddSubject = () => {
+  const handleAddSubject = async () => {
     if (!newSubject.name || !newSubject.code || !newSubject.classId) {
       toast.error('Please fill in all fields')
       return
     }
 
-    const subject: Subject = {
-      id: String(subjects.length + 1),
-      name: newSubject.name,
-      code: newSubject.code,
-      class_id: newSubject.classId,
-      teacher: undefined,
-    }
+    try {
+      const { data, error } = await supabase
+        .from('subjects')
+        .insert({
+          name: newSubject.name,
+          code: newSubject.code,
+          class_id: newSubject.classId,
+        })
+        .select()
+        .single()
 
-    setSubjects([...subjects, subject])
-    setNewSubject({ name: '', code: '', classId: '' })
-    setShowAddSubjectDialog(false)
-    toast.success('Subject created successfully')
+      if (error) throw error
+
+      setSubjects([...subjects, {
+        id: data.id,
+        name: data.name,
+        code: data.code,
+        class_id: data.class_id,
+      }])
+
+      setNewSubject({ name: '', code: '', classId: '' })
+      setShowAddSubjectDialog(false)
+      toast.success('Subject created successfully')
+    } catch (error: any) {
+      console.error('Error creating subject:', error)
+      toast.error(error.message || 'Failed to create subject')
+    }
   }
 
-  const handleDeleteClass = (classId: string) => {
-    if (confirm('Delete this class? This action cannot be undone.')) {
+  const handleDeleteClass = async (classId: string) => {
+    if (!confirm('Delete this class? This action cannot be undone.')) return
+
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .delete()
+        .eq('id', classId)
+
+      if (error) throw error
+
       setClasses(classes.filter((c) => c.id !== classId))
-      toast.success('Class deleted')
+      toast.success('Class deleted successfully')
+    } catch (error: any) {
+      console.error('Error deleting class:', error)
+      toast.error(error.message || 'Failed to delete class')
     }
   }
 

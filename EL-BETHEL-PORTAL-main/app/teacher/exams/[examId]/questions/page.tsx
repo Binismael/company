@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, Trash2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/error-utils'
 
 interface Question {
   id: string
@@ -110,7 +111,7 @@ export default function TeacherQuestionsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        toast.error(data.error || 'Failed to save question')
+        toast.error(getErrorMessage(data, 'Failed to save question'))
         return
       }
 
@@ -127,7 +128,7 @@ export default function TeacherQuestionsPage() {
       resetForm()
       setOpenDialog(false)
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save question')
+      toast.error(getErrorMessage(error, 'Failed to save question'))
     }
   }
 

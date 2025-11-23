@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/error-utils'
 import {
   CheckCircle2,
   XCircle,
@@ -136,11 +137,11 @@ export default function StudentRegistrationsPage() {
         setApproveComments('')
         await loadData()
       } else {
-        toast.error(result.error || 'Failed to approve student')
+        toast.error(getErrorMessage(result, 'Failed to approve student'))
       }
     } catch (error) {
       console.error('Error approving student:', error)
-      toast.error('Failed to approve student')
+      toast.error(getErrorMessage(error, 'Failed to approve student'))
     } finally {
       setProcessing(false)
     }
@@ -163,11 +164,11 @@ export default function StudentRegistrationsPage() {
         setRejectReason('')
         await loadData()
       } else {
-        toast.error(result.error || 'Failed to reject student')
+        toast.error(getErrorMessage(result, 'Failed to reject student'))
       }
     } catch (error) {
       console.error('Error rejecting student:', error)
-      toast.error('Failed to reject student')
+      toast.error(getErrorMessage(error, 'Failed to reject student'))
     } finally {
       setProcessing(false)
     }

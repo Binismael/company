@@ -178,9 +178,11 @@ export default function StudentPortalLayout({
       <aside className="hidden lg:flex w-64 flex-col border-r border-gray-200 bg-white">
         {/* Logo */}
         <div className="p-6 flex items-center gap-3 border-b border-gray-200">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-lg font-bold text-white">⚜</span>
-          </div>
+          <img
+            src="https://cdn.builder.io/api/v1/image/assets%2Fa6537ca4bb2f481ba022e7b35be0f036%2F5e0c30c113214b4bb9e43c74d6d6b7cc?format=webp&width=800"
+            alt="El Bethel Academy Logo"
+            className="w-10 h-10 rounded-md object-contain flex-shrink-0"
+          />
           <div>
             <h1 className="font-bold text-gray-900">El Bethel</h1>
             <p className="text-xs text-gray-600">Student Portal</p>
@@ -211,9 +213,11 @@ export default function StudentPortalLayout({
         <div className="lg:hidden border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-                <span className="text-lg font-bold text-white">⚜</span>
-              </div>
+              <img
+                src="https://cdn.builder.io/api/v1/image/assets%2Fa6537ca4bb2f481ba022e7b35be0f036%2F5e0c30c113214b4bb9e43c74d6d6b7cc?format=webp&width=800"
+                alt="El Bethel Academy Logo"
+                className="w-10 h-10 rounded-md object-contain"
+              />
               <div>
                 <h1 className="font-bold text-gray-900 text-sm">El Bethel</h1>
               </div>

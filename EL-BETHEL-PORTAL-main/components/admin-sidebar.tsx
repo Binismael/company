@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { label: 'Assignments', icon: '📋', href: '/admin/assignments' },
   { label: 'Results', icon: '📊', href: '/admin/results' },
   { label: 'Announcements', icon: '📢', href: '/admin/announcements' },
+  { label: 'Create User', icon: '➕', href: '/admin/users/create' },
   { label: 'Settings', icon: '⚙️', href: '/admin/settings' },
 ]
 
