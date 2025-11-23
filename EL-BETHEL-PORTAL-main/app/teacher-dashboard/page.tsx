@@ -45,7 +45,7 @@ export default function TeacherDashboard() {
         const { data: userData } = await supabase
           .from('users')
           .select('*')
-          .eq('auth_id', user.id)
+          .or(`auth_id.eq.${user.id},id.eq.${user.id}`)
           .single()
 
         setUserInfo(userData)

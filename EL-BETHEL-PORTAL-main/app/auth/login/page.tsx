@@ -1,111 +1,205 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase-client'
 
-export default function AdminLoginPage() {
+import { supabase } from '@/lib/supabase-client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Loader2 } from 'lucide-react'
+
+export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isAdminLogin = searchParams.get('admin') === '1'
+
   const [email, setEmail] = useState('')
+  const [regNumber, setRegNumber] = useState('')
   const [password, setPassword] = useState('')
+  const [loginType, setLoginType] = useState<'email' | 'reg-number'>('email')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     try {
+      const identifier = loginType === 'email' ? email : regNumber
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: loginType === 'email' ? email : `${regNumber}@placeholder.com`,
+        password
       })
 
       if (signInError) {
-        toast.error('Invalid credentials')
+        setError('Invalid credentials')
         setLoading(false)
         return
       }
 
       const user = signInData.user
       if (!user) {
-        toast.error('User not found after sign-in')
+        setError('Authentication failed — user missing')
         setLoading(false)
         return
       }
 
-      const MAIN_ADMIN_EMAIL = 'abdulmuizismael@gmail.com'
-      if (email.trim().toLowerCase() === MAIN_ADMIN_EMAIL.toLowerCase()) {
-        toast.success('Welcome back, Super Admin!')
-        router.push('/admin-dashboard')
-        return
-      }
-
-      const orFilter = `id.eq.${user.id},auth_id.eq.${user.id},email.eq.${email}`
-      const { data: adminUser, error: adminError } = await supabase
+      // Fetch profile by ANY matching field
+      const { data: profile, error: profileError } = await supabase
         .from('users')
-        .select('id,email,role')
-        .or(orFilter)
-        .eq('role', 'admin')
+        .select('*')
+        .or(`id.eq.${user.id},email.eq.${email},reg_number.eq.${regNumber}`)
         .maybeSingle()
 
-      if (adminError) {
-        console.error('Admin lookup error:', adminError)
-        toast.error('Database error — contact support')
+      if (profileError) {
+        setError('Failed to fetch user profile')
         setLoading(false)
         return
       }
 
-      if (!adminUser) {
-        toast.error('User account not found in the system. Please contact your administrator.')
+      if (!profile) {
+        setError('User account not found — contact administrator')
         setLoading(false)
         return
       }
 
-      toast.success('Welcome back, Admin!')
-      router.push('/admin-dashboard')
-    } catch (err) {
-      console.error('Unexpected login error:', err)
-      toast.error('Unexpected error during login')
+      if (isAdminLogin && profile.role !== 'admin') {
+        setError('Only admins may access this page.')
+        await supabase.auth.signOut()
+        setLoading(false)
+        return
+      }
+
+      sessionStorage.setItem('user', JSON.stringify(profile))
+      sessionStorage.setItem('session', JSON.stringify(signInData.session))
+
+      toast.success('Login successful!')
+
+      if (profile.role === 'admin') {
+        router.push('/admin-dashboard')
+      } else if (profile.role === 'student') {
+        router.push('/student-dashboard')
+      } else if (profile.role === 'teacher') {
+        router.push('/teacher-dashboard')
+      } else {
+        router.push('/')
+      }
+    } catch (err: any) {
+      console.error('Login error:', err)
+      setError('Unexpected error occurred')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md space-y-4"
-      >
-        <h1 className="text-2xl font-bold text-center">Admin Login</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50">
 
-        <input
-          type="email"
-          placeholder="Admin Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full border p-2 rounded"
-        />
+      <div className="max-w-md mx-auto px-4 pb-12 pt-16">
+        <Card className="shadow-xl border-0 rounded-2xl">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-2xl">{isAdminLogin ? 'Admin Login' : 'Login'}</CardTitle>
+            <CardDescription>
+              {isAdminLogin ? 'Admins only' : 'Access your portal'}
+            </CardDescription>
+          </CardHeader>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full border p-2 rounded"
-        />
+          <CardContent>
+            <Tabs value={loginType} onValueChange={(v) => setLoginType(v as any)} className="mb-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="email">Email</TabsTrigger>
+                <TabsTrigger value="reg-number">Reg. Number</TabsTrigger>
+              </TabsList>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded"
-        >
-          {loading ? 'Logging in…' : 'Login as Admin'}
-        </button>
-      </form>
+              <TabsContent value="email" className="space-y-4 mt-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+
+                  <div>
+                    <label className="text-sm font-medium">Email Address</label>
+                    <Input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Password</label>
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <Button className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="reg-number" className="space-y-4 mt-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Registration Number</label>
+                    <Input
+                      type="text"
+                      placeholder="ELBA/25/SS3B/001"
+                      value={regNumber}
+                      onChange={(e) => setRegNumber(e.target.value.toUpperCase())}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Password</label>
+                    <Input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <Button className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+                  </Button>
+                </form>
+              </TabsContent>
+
+            </Tabs>
+
+            <div className="text-center mt-6 text-sm">
+              <Link href="/auth/register" className="text-blue-600 font-medium">
+                Create an account
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

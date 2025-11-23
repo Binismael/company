@@ -11,33 +11,24 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const studentId = searchParams.get('studentId')
-    const status = searchParams.get('status')
-    const term = searchParams.get('term')
-    const session = searchParams.get('session')
+    const timetableId = searchParams.get('timetableId')
+    const dayOfWeek = searchParams.get('dayOfWeek')
 
     let query = supabaseAdmin
-      .from('fees')
+      .from('timetable_schedules')
       .select(`
         *,
-        student:students(id, admission_number, user:users(full_name))
+        subject:subjects(id, name, code),
+        teacher:users(id, full_name, email)
       `)
-      .order('created_at', { ascending: false })
+      .order('period_number', { ascending: true })
 
-    if (studentId) {
-      query = query.eq('student_id', studentId)
+    if (timetableId) {
+      query = query.eq('timetable_id', timetableId)
     }
 
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    if (term) {
-      query = query.eq('term', term)
-    }
-
-    if (session) {
-      query = query.eq('session', session)
+    if (dayOfWeek) {
+      query = query.eq('day_of_week', parseInt(dayOfWeek))
     }
 
     const { data, error } = await query
@@ -65,9 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { studentId, term, session, amount, dueDate } = body
+    const {
+      timetableId,
+      dayOfWeek,
+      periodNumber,
+      startTime,
+      endTime,
+      subjectId,
+      teacherId,
+      location,
+    } = body
 
-    if (!studentId || !term || !session || !amount) {
+    if (!timetableId || !dayOfWeek || !periodNumber || !startTime || !endTime) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -75,15 +75,17 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from('fees')
+      .from('timetable_schedules')
       .insert([
         {
-          student_id: studentId,
-          term,
-          session,
-          amount,
-          due_date: dueDate || null,
-          status: 'Pending',
+          timetable_id: timetableId,
+          day_of_week: dayOfWeek,
+          period_number: periodNumber,
+          start_time: startTime,
+          end_time: endTime,
+          subject_id: subjectId,
+          teacher_id: teacherId,
+          location,
         },
       ])
       .select()
@@ -112,27 +114,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { feeId, paidAmount, status } = body
+    const { id, ...updateData } = body
 
-    if (!feeId) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'feeId is required' },
+        { error: 'Schedule ID is required' },
         { status: 400 }
       )
     }
 
-    const updateData: any = {}
-    if (paidAmount !== undefined) {
-      updateData.paid_amount = paidAmount
-    }
-    if (status !== undefined) {
-      updateData.status = status
-    }
-
     const { data, error } = await supabaseAdmin
-      .from('fees')
+      .from('timetable_schedules')
       .update(updateData)
-      .eq('id', feeId)
+      .eq('id', id)
       .select()
       .single()
 
@@ -141,6 +135,43 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json(data)
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Service not available' },
+        { status: 503 }
+      )
+    }
+
+    const body = await request.json()
+    const { id } = body
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Schedule ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const { error } = await supabaseAdmin
+      .from('timetable_schedules')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Internal server error' },

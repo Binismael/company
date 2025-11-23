@@ -11,33 +11,30 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
+    const documentType = searchParams.get('type')
+    const userId = searchParams.get('userId')
     const studentId = searchParams.get('studentId')
-    const status = searchParams.get('status')
-    const term = searchParams.get('term')
-    const session = searchParams.get('session')
 
     let query = supabaseAdmin
-      .from('fees')
+      .from('documents')
       .select(`
         *,
-        student:students(id, admission_number, user:users(full_name))
+        user:users(id, full_name, email),
+        student:students(id, admission_number, user:users(full_name)),
+        uploaded_by_user:users!uploaded_by(id, full_name)
       `)
       .order('created_at', { ascending: false })
 
+    if (documentType) {
+      query = query.eq('document_type', documentType)
+    }
+
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+
     if (studentId) {
       query = query.eq('student_id', studentId)
-    }
-
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    if (term) {
-      query = query.eq('term', term)
-    }
-
-    if (session) {
-      query = query.eq('session', session)
     }
 
     const { data, error } = await query
@@ -65,25 +62,47 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { studentId, term, session, amount, dueDate } = body
+    const {
+      userId,
+      studentId,
+      assignmentId,
+      documentType,
+      fileName,
+      filePath,
+      fileSize,
+      mimeType,
+      description,
+      uploadedBy,
+    } = body
 
-    if (!studentId || !term || !session || !amount) {
+    if (!documentType || !fileName || !filePath) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
+    if (!['profile_picture', 'student_document', 'assignment_submission', 'receipt'].includes(documentType)) {
+      return NextResponse.json(
+        { error: 'Invalid document type' },
+        { status: 400 }
+      )
+    }
+
     const { data, error } = await supabaseAdmin
-      .from('fees')
+      .from('documents')
       .insert([
         {
-          student_id: studentId,
-          term,
-          session,
-          amount,
-          due_date: dueDate || null,
-          status: 'Pending',
+          user_id: userId || null,
+          student_id: studentId || null,
+          assignment_id: assignmentId || null,
+          document_type: documentType,
+          file_name: fileName,
+          file_path: filePath,
+          file_size: fileSize || null,
+          mime_type: mimeType || null,
+          description: description || null,
+          uploaded_by: uploadedBy || null,
         },
       ])
       .select()
@@ -102,7 +121,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+export async function DELETE(request: NextRequest) {
   try {
     if (!supabaseAdmin) {
       return NextResponse.json(
@@ -112,35 +131,25 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { feeId, paidAmount, status } = body
+    const { documentId } = body
 
-    if (!feeId) {
+    if (!documentId) {
       return NextResponse.json(
-        { error: 'feeId is required' },
+        { error: 'documentId is required' },
         { status: 400 }
       )
     }
 
-    const updateData: any = {}
-    if (paidAmount !== undefined) {
-      updateData.paid_amount = paidAmount
-    }
-    if (status !== undefined) {
-      updateData.status = status
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from('fees')
-      .update(updateData)
-      .eq('id', feeId)
-      .select()
-      .single()
+    const { error } = await supabaseAdmin
+      .from('documents')
+      .delete()
+      .eq('id', documentId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Internal server error' },

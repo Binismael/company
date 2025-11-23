@@ -96,10 +96,10 @@ export const signIn = async (data: SignInData) => {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', authData.user.id)
-        .single()
+        .or(`auth_id.eq.${authData.user.id},id.eq.${authData.user.id}`)
+        .maybeSingle()
 
-      if (userError) throw userError
+      if (userError) throw new Error((userError as any)?.message || 'Failed to fetch user')
 
       return {
         user: userData,

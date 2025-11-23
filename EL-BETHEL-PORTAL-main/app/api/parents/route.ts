@@ -11,36 +11,37 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const studentId = searchParams.get('studentId')
-    const status = searchParams.get('status')
-    const term = searchParams.get('term')
-    const session = searchParams.get('session')
+    const parentId = searchParams.get('id')
 
-    let query = supabaseAdmin
-      .from('fees')
+    if (parentId) {
+      const { data, error } = await supabaseAdmin
+        .from('parents')
+        .select(`
+          *,
+          user:users(id, email, full_name, role),
+          children:parent_student(
+            student:students(id, admission_number, user:users(full_name))
+          )
+        `)
+        .eq('id', parentId)
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+
+      return NextResponse.json(data)
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('parents')
       .select(`
         *,
-        student:students(id, admission_number, user:users(full_name))
+        user:users(id, email, full_name, role),
+        children:parent_student(
+          student:students(id, admission_number, user:users(full_name))
+        )
       `)
-      .order('created_at', { ascending: false })
-
-    if (studentId) {
-      query = query.eq('student_id', studentId)
-    }
-
-    if (status) {
-      query = query.eq('status', status)
-    }
-
-    if (term) {
-      query = query.eq('term', term)
-    }
-
-    if (session) {
-      query = query.eq('session', session)
-    }
-
-    const { data, error } = await query
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
@@ -65,25 +66,38 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { studentId, term, session, amount, dueDate } = body
+    const {
+      userId,
+      occupation,
+      phoneNumber,
+      address,
+      city,
+      state,
+      country,
+      emergencyContact,
+      emergencyPhone,
+    } = body
 
-    if (!studentId || !term || !session || !amount) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'User ID is required' },
         { status: 400 }
       )
     }
 
     const { data, error } = await supabaseAdmin
-      .from('fees')
+      .from('parents')
       .insert([
         {
-          student_id: studentId,
-          term,
-          session,
-          amount,
-          due_date: dueDate || null,
-          status: 'Pending',
+          user_id: userId,
+          occupation,
+          phone_number: phoneNumber,
+          address,
+          city,
+          state,
+          country,
+          emergency_contact: emergencyContact,
+          emergency_phone: emergencyPhone,
         },
       ])
       .select()
@@ -112,27 +126,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { feeId, paidAmount, status } = body
+    const { id, ...updateData } = body
 
-    if (!feeId) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'feeId is required' },
+        { error: 'Parent ID is required' },
         { status: 400 }
       )
     }
 
-    const updateData: any = {}
-    if (paidAmount !== undefined) {
-      updateData.paid_amount = paidAmount
-    }
-    if (status !== undefined) {
-      updateData.status = status
-    }
-
     const { data, error } = await supabaseAdmin
-      .from('fees')
+      .from('parents')
       .update(updateData)
-      .eq('id', feeId)
+      .eq('id', id)
       .select()
       .single()
 
